@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <title>DUAL // FUSION OS — V2 Connected (corrigido)</title>
+  <title>DUAL // FUSION OS — V7 (Final Fluid)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#05070a">
@@ -14,8 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
   <style>
-  /* (styles unchanged from original for brevity) */
-  :root{
+    :root{
       --bg-deep:#030406; --glass-surface:rgba(18,18,22,0.65); --glass-border:rgba(255,255,255,0.06);
       --neon-cyan:#00f2ff; --neon-purple:#bd00ff; --neon-gold:#ffd700; --neon-danger:#ff2a6d; --neon-success:#00ff9d;
       --font-ui:'Montserrat',sans-serif; --font-code:'JetBrains Mono',monospace;
@@ -28,7 +27,8 @@
     body{margin:0;padding:0;min-height:100vh;background-color:var(--bg-deep);color:#fff;
       font-family:var(--font-ui);overflow:hidden;
       background-image:linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-      background-size:50px 50px;
+      background-size:52px 52px; /* Ajuste sutil para evitar cortes visuais nas bordas */
+      background-position: center;
     }
 
     /* Ambient Light */
@@ -37,6 +37,15 @@
     .blob-1{width:60vw;height:60vw;background:var(--neon-cyan);top:-20%;left:-20%}
     .blob-2{width:50vw;height:50vw;background:var(--neon-purple);bottom:-20%;right:-20%;animation-delay:-5s}
     @keyframes float{0%{transform:translate(0,0)}100%{transform:translate(40px,60px)}}
+
+    /* --- CINEMATIC SNAP ZONE --- */
+    #snap-zone {
+        position: fixed; top: 0; left: 0; right: 0; height: 80px;
+        background: linear-gradient(to bottom, rgba(0, 242, 255, 0.25), transparent);
+        opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 9000;
+        box-shadow: 0 0 40px rgba(0, 242, 255, 0.1);
+    }
+    #snap-zone.active { opacity: 1; }
 
     /* Container Central */
     .container{
@@ -48,15 +57,24 @@
     .fusion-card{
       pointer-events:auto;
       width:100%; max-width:440px;
+      /* Max height limitation allows scrolling if content expands too much */
+      max-height: 85vh; overflow-y: auto; overflow-x: hidden;
       background:var(--glass-surface); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
       border:1px solid var(--glass-border); border-radius:36px; padding:30px 25px;
       box-shadow:0 40px 100px rgba(0,0,0,0.8);
       position:relative; opacity:0; transform:translateY(50px) scale(0.96);
       display:flex; flex-direction:column; gap:8px;
-      transition: width 0.5s var(--ease-smooth), height 0.5s var(--ease-smooth), border-radius 0.5s var(--ease-smooth), transform 0.4s var(--ease-smooth), opacity 0.4s;
+      transition: width 0.5s var(--ease-smooth), height 0.5s var(--ease-smooth), border-radius 0.5s var(--ease-smooth), opacity 0.4s, left 0.4s var(--ease-smooth), top 0.4s var(--ease-smooth), box-shadow 0.4s;
       will-change: transform, width, height, border-radius, left, top;
-      touch-action: none; 
+      
+      /* Permite scroll vertical (pan-y) mas bloqueia horizontal e zoom */
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      
+      scrollbar-width: none; /* Hide scrollbar Firefox */
     }
+    .fusion-card::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome/Safari */
     .fusion-card.active{opacity:1;transform:translateY(0) scale(1);}
 
     /* Estado CLOSED */
@@ -72,20 +90,34 @@
       box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0,242,255,0.2);
       z-index: 9999;
       cursor: grab;
+      touch-action: none; /* No orb, bloqueia tudo para arrastar livremente */
+      overflow: visible; 
     }
-    .fusion-card.orb:active { cursor: grabbing; transform: scale(0.9); }
+    .fusion-card.orb:active { cursor: grabbing; transform: scale(0.95); }
     .fusion-card.orb .text-block, .fusion-card.orb .clock-widget, .fusion-card.orb .card-body, .fusion-card.orb .small-preview { display: none !important; }
     .fusion-card.orb .card-header { margin: 0; width: 100%; height: 100%; justify-content: center; padding:0; }
     .fusion-card.orb .avatar-slot { width: 54px; height: 54px; border-radius: 50%; margin:0; opacity: 1; pointer-events: none; }
+    
+    /* Orb Quick Menu Trigger */
+    .orb-menu-trigger {
+        position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%);
+        width: 24px; height: 24px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer;
+        color: #fff; font-size: 12px; pointer-events: auto; backdrop-filter: blur(4px);
+    }
+    .fusion-card.orb:hover .orb-menu-trigger { display: flex; }
 
     /* ESTADO: HUD */
     .fusion-card.hud {
-      position: fixed !important; top: 12px !important; left: 50% !important;
-      transform: translateX(-50%) !important;
-      width: 92% !important; max-width: 600px !important; height: 64px !important;
-      padding: 0 16px !important; border-radius: 99px !important;
+      position: fixed !important; top: 0 !important; left: 50% !important;
+      transform: translateX(-50%) !important; 
+      width: 96% !important; max-width: 600px !important; height: 64px !important;
+      padding: 0 16px !important; border-radius: 0 0 24px 24px !important;
       flex-direction: row; align-items: center; justify-content: space-between;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.7); z-index: 9999;
+      overflow: visible;
+      border-top: none;
+      touch-action: none; /* Bloqueia scroll para gestos de puxar */
     }
     .fusion-card.hud .card-body, .fusion-card.hud .small-preview { display: none !important; }
     .fusion-card.hud .card-header { margin: 0; width: 100%; justify-content: space-between; }
@@ -93,9 +125,31 @@
     .fusion-card.hud .brand-dual { font-size: 1.2rem; margin:0; }
     .fusion-card.hud .greeting-row { display:none; } 
     .fusion-card.hud .text-block { flex: unset; }
+    
+    /* Helper de Arrastar no HUD */
+    .drag-handle {
+        width: 60px; height: 5px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 10px;
+        position: absolute; bottom: 8px; left: 50%;
+        transform: translateX(-50%);
+        display: none; cursor: grab; pointer-events: none; 
+        transition: background 0.3s;
+    }
+    .fusion-card.hud:active .drag-handle { background: var(--neon-cyan); width: 70px; }
+    .fusion-card.hud .drag-handle { display: block; }
+    
+    /* HUD Menu Btn */
+    .hud-menu-btn { display: none; background: transparent; border: none; color: rgba(255,255,255,0.6); cursor: pointer; }
+    .fusion-card.hud .hud-menu-btn { display: block; }
+    .fusion-card.hud .clock-widget { display: none; } 
 
     /* Internals */
-    .card-header{display:flex;align-items:center;gap:15px;margin-bottom:18px; width:100%; cursor: pointer;}
+    .card-header{
+        display:flex;align-items:center;gap:15px;margin-bottom:18px; width:100%; cursor: pointer;
+        /* Header é área de arraste, então bloqueamos pan-y nativo aqui */
+        touch-action: none; 
+    }
     .avatar-slot{width:64px;height:64px;border-radius:18px;overflow:hidden;opacity:0;transition:opacity 0.35s}
     .avatar-slot.shown{opacity:1}
 
@@ -126,17 +180,30 @@
     .content-visible .stagger-item:nth-child(1){transition-delay:0.1s}
     .content-visible .stagger-item:nth-child(2){transition-delay:0.18s}
     .content-visible .stagger-item:nth-child(3){transition-delay:0.25s}
+    .content-visible .stagger-item:nth-child(4){transition-delay:0.30s}
 
     .cyber-input{width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 50px 16px 18px;color:#fff;font-family:var(--font-code);font-size:0.9rem}
 
+    /* COLLAPSIBLE SECTIONS */
     .activation-wrap{display:flex;flex-direction:column;gap:8px}
     .activation-card{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);padding:12px;border-radius:10px;overflow:hidden;transition:all 320ms var(--ease-smooth)}
     .activation-pre{font-family:var(--font-code);white-space:pre-wrap;margin:0;padding:8px;background:rgba(0,0,0,0.12);border-radius:8px;border:1px dashed rgba(255,255,255,0.03);color:#fff;font-size:0.75rem}
-    .activation-hidden{max-height:0;opacity:0;padding:0 12px;pointer-events:none}
-    .activation-open{max-height:400px;opacity:1;padding:12px}
+    
+    .activation-hidden{max-height:0;opacity:0;padding:0 12px;pointer-events:none; margin-top:0;}
+    .activation-open{max-height:500px;opacity:1;padding:12px; margin-top:4px;}
 
-    .trigger-btn{width:100%;padding:12px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.5);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:8px}
+    .activation-toggle {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 8px 4px; cursor: pointer; opacity: 0.9; transition: 0.2s;
+    }
+    .activation-toggle:hover { opacity: 1; }
+
+    .trigger-btn{width:100%;padding:12px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.5);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:8px;transition:0.2s}
     .trigger-btn:hover{background:rgba(255,255,255,0.04);color:#fff;border-color:rgba(255,255,255,0.3)}
+    
+    .mode-btn { background: rgba(0,242,255,0.05); border-color: rgba(0,242,255,0.2); color: var(--neon-cyan); }
+    .mode-btn:hover { background: rgba(0,242,255,0.15); box-shadow: 0 0 15px rgba(0,242,255,0.1); }
+    .mode-btn.active-mode { background: var(--neon-cyan); color: #000; box-shadow: 0 0 20px rgba(0,242,255,0.4); border-color:transparent; }
 
     .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
     .stat-box{background:rgba(255,255,255,0.03);border-radius:12px;padding:10px;text-align:center}
@@ -181,14 +248,14 @@
     /* --- CHAT STYLES --- */
     #particles-js{position:absolute;inset:0;z-index:12; pointer-events:none; mix-blend-mode: lighten;}
     .svg-container{position:absolute;top:35%;left:50%;transform:translate(-50%,-50%);
-                   width:160px;height:160px;z-index:-1; pointer-events: none; /* Let clicks pass if under header */  }
+                   width:160px;height:160px;z-index:-1; pointer-events: none; }
     .svg-container object{width:100%;height:100%;}
 
     .top-info {
       position: fixed; top: 28px; left:50%;transform:translate(-50%,-50%); z-index: 3;
       background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 12px; font-size: 0.69em;
       backdrop-filter: blur(6px);
-      pointer-events: none; /* Let clicks pass if under header */
+      pointer-events: none; 
     }
 
     .response-container{
@@ -204,9 +271,12 @@
     .control-btn{background:rgba(255,255,255,0.05);padding:6px;border-radius:6px;cursor:pointer;transition:background 0.4s;display:flex;gap:6px;border:none;outline:none}
     .control-btn:hover{background:rgba(255,255,255,0.12)}
     .control-btn svg{stroke:rgba(255,255,255,0.5);fill:none}
-    .toggle-button svg{color:#fff;stroke:rgba(255,255,255,0.3);fill:none}
-    .toggle-button svg circle:nth-child(2){fill: currentColor}
-    .toggle-button.active svg{color:#0f0}
+    
+    /* Toggle Button Styles Updated */
+    .toggle-button svg{color:#fff;stroke:rgba(255,255,255,0.3);fill:none; transition: all 0.3s;}
+    .toggle-button.active svg{stroke:var(--neon-success); filter: drop-shadow(0 0 5px var(--neon-success));}
+    .toggle-button.error svg{stroke:var(--neon-danger); filter: drop-shadow(0 0 5px var(--neon-danger));}
+    
     .pagination{display:flex;align-items:center;gap:10px}
     .pagination button{background:none;border:none;font-size:1.2em;color:#6fe4fb;cursor:pointer;transition:transform 0.4s}
     .pagination button:hover{transform:scale(1.2)}
@@ -259,6 +329,9 @@
     .crystal-list { max-height:300px; overflow:auto; display:flex; flex-direction:column; gap:8px }
     .crystal-item { background: rgba(255,255,255,0.02); padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:8px; align-items:flex-start }
     .crystal-item .actions { display:flex; gap:6px }
+    
+    .panel-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 15px 0; width: 100%; }
+    .section-title { font-size: 0.8rem; text-transform: uppercase; color: var(--neon-cyan); letter-spacing: 1px; margin-bottom: 8px; font-weight: 700; }
 
     @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
     @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -285,6 +358,8 @@
 </head>
 <body>
 
+  <!-- Cinematic Elements -->
+  <div id="snap-zone"></div>
   <div class="ambient-light"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
   <div id="particles-js"><canvas class="particles-js-canvas-el"></canvas></div>
 
@@ -300,7 +375,7 @@
     <div class="fusion-card closed" id="mainCard">
 
       <div class="card-header" id="cardHeader">
-        <div class="avatar-slot" id="avatarTarget" title="Gerenciar Chaves"></div>
+        <div class="avatar-slot" id="avatarTarget" title="Gerenciar Chaves (Cofre)"></div>
         <div class="text-block">
           <div class="greeting-row">
             <span class="txt-thin" id="lblHello">Oi,</span>
@@ -312,7 +387,14 @@
           <div class="time-display" id="clockTime">00:00</div>
           <span class="status-led">ONLINE</span>
         </div>
+        <!-- Button visible only in HUD mode -->
+        <button class="hud-menu-btn" id="hudMenuBtn" title="Menu Rápido"><i data-lucide="menu"></i></button>
       </div>
+      
+      <!-- Trigger visible only on Orb Hover -->
+      <div class="orb-menu-trigger" id="orbMenuTrigger" title="Menu Rápido">●●●</div>
+      <!-- Drag Handle for HUD -->
+      <div class="drag-handle"></div>
 
       <div class="small-preview" id="smallPreview" title="Gerenciar Chaves">
         <div class="mini-avatar" id="smallMiniAvatar"></div>
@@ -321,12 +403,14 @@
       </div>
 
       <div class="card-body" id="cardBody">
+        <!-- Main Input User -->
         <div class="input-wrapper stagger-item">
           <input type="text" class="cyber-input" id="inputUser" placeholder="Identifique-se..." autocomplete="off">
         </div>
 
+        <!-- Section 1: ASCII Activation -->
         <div class="activation-wrap stagger-item">
-          <div class="activation-toggle" onclick="toggleActivation()">
+          <div class="activation-toggle" onclick="toggleSection('activationCard')">
             <div style="display:flex;align-items:center;gap:8px">
               <div style="width:10px;height:10px;border-radius:99px;background:var(--neon-cyan)"></div>
               <strong style="letter-spacing:1px;font-size:0.9rem">Ativação ASCII</strong>
@@ -349,6 +433,60 @@
           </div>
         </div>
 
+        <!-- Section 2: System & Neural (Config) - Embedded in Card -->
+        <div class="activation-wrap stagger-item">
+            <div class="activation-toggle" onclick="toggleSection('systemCard')">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:10px;height:10px;border-radius:99px;background:var(--neon-purple)"></div>
+                  <strong style="letter-spacing:1px;font-size:0.9rem">SYSTEM & NEURAL</strong>
+                </div>
+                <div style="margin-left:auto;font-size:0.82rem;color:rgba(255,255,255,0.6)">CONFIG</div>
+            </div>
+            <div id="systemCard" class="activation-card activation-hidden">
+                <div class="col">
+                   <div class="section-title">IDENTIDADE DA INFODOSE</div>
+                   <input type="text" id="infodoseNameInput" placeholder="Nome: World System..." style="width:100%;margin-bottom:8px;padding:8px;border-radius:6px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:#fff">
+                   
+                   <div class="section-title" style="margin-top:8px">CONEXÃO NEURAL (SK)</div>
+                   <input type="password" id="apiKeyInput" placeholder="sk-or-..." autocomplete="off" style="width:100%;margin-bottom:6px;padding:8px;border-radius:6px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:#fff">
+                   <input type="text" id="modelInput" placeholder="Modelo AI..." style="width:100%;margin-bottom:8px;padding:8px;border-radius:6px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:#fff">
+                   
+                   <div class="section-title" style="margin-top:8px">TREINAMENTO</div>
+                   <div style="display:flex;gap:6px">
+                       <input type="file" id="trainingUpload" accept=".txt" style="display:none">
+                       <button class="trigger-btn" onclick="document.getElementById('trainingUpload').click()" style="padding:8px;flex:1">UPLOAD .TXT</button>
+                       <button id="exportTrainingBtn" class="trigger-btn" style="padding:8px;flex:1">BAIXAR</button>
+                   </div>
+                   <div id="trainingFileName" class="small" style="margin-top:4px;color:#9bd;font-size:0.75rem">Vazio</div>
+
+                   <div class="panel-divider" style="margin:10px 0"></div>
+
+                   <div style="display:flex; flex-direction:column; gap:6px;">
+                        <div style="display:flex;align-items:center;gap:6px;font-size:0.85rem">
+                            <input type="checkbox" id="assistantActiveCheckbox"> <label>Infodose Ativa</label>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:0.85rem">
+                            <input type="checkbox" id="trainingActiveCheckbox"> <label>Treinamento Ativo</label>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:0.85rem">
+                            <input type="checkbox" id="zenModeCheckbox"> <label>Modo Zen</label>
+                        </div>
+                   </div>
+
+                   <button id="saveSystemBtn" class="trigger-btn" style="margin-top:12px;background:var(--neon-cyan);color:#000;border:none;font-weight:700">SALVAR CONFIGURAÇÃO</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stagger-item" style="margin-top:4px">
+            <div class="stat-lbl" style="margin-bottom:6px">INTERFACE MODE</div>
+            <div style="display:flex; gap:8px;">
+                <button class="trigger-btn mode-btn active-mode" id="btnModeCard" onclick="setMode('card')" style="flex:1" title="Modo Padrão">CARD</button>
+                <button class="trigger-btn mode-btn" id="btnModeOrb" onclick="setMode('orb')" style="flex:1" title="Flutuante">ORB</button>
+                <button class="trigger-btn mode-btn" id="btnModeHud" onclick="setMode('hud')" style="flex:1" title="Barra de Topo">HUD</button>
+            </div>
+        </div>
+
         <div class="stagger-item">
           <div class="stats-grid">
             <div class="stat-box"><span class="stat-lbl">LATÊNCIA</span><span class="stat-val">12ms</span></div>
@@ -367,12 +505,13 @@
 
   <div class="toaster-wrap" id="toasterWrap"></div>
 
+  <!-- KEYS MANAGER MODAL -->
   <div id="keysModal" class="modal-overlay" aria-hidden="true">
     <div class="keys-card" role="dialog">
       <div class="keys-header">
         <div>
           <div id="keysTitle" style="font-weight:800;font-size:1.1rem;color:var(--neon-cyan)">USER KEYS MANAGER</div>
-          <div style="color:rgba(255,255,255,0.6);font-size:0.85rem">Gerencie suas ESK Keys com segurança local.</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:0.85rem">Gerencie suas chaves API com segurança local (Cofre).</div>
         </div>
         <button id="closeKeysBtn" class="small-btn">X</button>
       </div>
@@ -402,6 +541,7 @@
     </div>
   </div>
 
+  <!-- VAULT UNLOCK MODAL -->
   <div id="vaultModal" class="modal-overlay" aria-hidden="true">
     <div class="keys-card">
       <div class="vault-icon"><i data-lucide="lock" style="width:24px;height:24px"></i></div>
@@ -428,14 +568,15 @@
         <button class="control-btn paste-button" title="Colar">
           <svg viewBox="0 0 24 24" width="20"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="4" x2="12" y2="20"></line></svg>
         </button>
-        <button id="toggleBtn" class="control-btn toggle-button" title="Painel Infodose">
-          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+        <button id="toggleBtn" class="control-btn toggle-button" title="Check Connection & Training">
+          <!-- Toggle Icon (Power/Signal hybrid) -->
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+            <line x1="12" y1="2" x2="12" y2="12"></line>
+          </svg>
         </button>
         <button id="crystalBtn" class="control-btn" title="Cristalizados">
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2l2.9 6.3L21 10l-5 3.6L17.8 21 12 17.7 6.2 21 7 13.6 2 10l6.1-1.7L12 2z"></path></svg>
-        </button>
-        <button id="settingsBtn" class="control-btn" title="Configurações">
-          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
       </div>
       <div class="pagination">
@@ -452,61 +593,6 @@
     <button id="voiceBtn" title="Falar">
       <object data="Reset_buttom_Dual-Infodose.svg" type="image/svg+xml" width="36" height="36" style="pointer-events: none;"></object>
     </button>
-  </div>
-
-  <div id="settingsModal" class="modal">
-    <div class="box">
-      <h3>Configuração Neural</h3>
-      <div class="col">
-        <div class="input-group">
-          <label>OpenRouter API Key (SK)</label>
-          <input type="password" id="apiKeyInput" placeholder="sk-or-..." autocomplete="off">
-        </div>
-        <div class="input-group">
-          <label>Modelo AI</label>
-          <input type="text" id="modelInput" placeholder="ex: meta-llama/llama-4-maverick:free">
-        </div>
-        <div class="settings-actions">
-          <button id="cancelSettings" class="btn btn-sec">Cancelar</button>
-          <button id="saveSettings" class="btn btn-prim">Salvar Conexão</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="togglePanel" class="panel">
-    <div class="box">
-      <h3>Painel Infodose</h3>
-      <div class="row">
-        <div style="flex:1" class="col">
-          <label class="small">Usuário</label>
-          <input type="text" id="userNameInput" placeholder="Seu nome...">
-        </div>
-        <div style="flex:1" class="col">
-          <label class="small">Nome da Infodose</label>
-          <input type="text" id="infodoseNameInput" placeholder="Ex: World System — Alpha">
-        </div>
-      </div>
-      <div style="margin-top:10px" class="col">
-        <label class="small">Treinamento (World System) — Upload / Export</label>
-        <input type="file" id="trainingUpload" accept=".txt">
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button id="importTrainingBtn" class="btn btn-sec">Importar (ler)</button>
-          <button id="exportTrainingBtn" class="btn btn-prim">Exportar treino</button>
-        </div>
-        <div id="trainingFileName" class="small" style="margin-top:6px;color:#9bd">Nenhum arquivo carregado</div>
-      </div>
-      <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
-        <label class="small" style="flex:1">Infodose ativa</label>
-        <input type="checkbox" id="assistantActiveCheckbox">
-        <label class="small" style="flex:1">Treinamento ativo</label>
-        <input type="checkbox" id="trainingActiveCheckbox">
-      </div>
-      <div style="margin-top:12px; display:flex; gap:8px;">
-        <button id="savePanelBtn" class="btn btn-prim">Salvar Painel</button>
-        <button id="closePanelBtn" class="btn btn-sec">Fechar</button>
-      </div>
-    </div>
   </div>
 
   <div id="crystalModal" class="modal">
@@ -549,6 +635,13 @@
       actMiniAvatar: document.getElementById('actMiniAvatar'),
       actBadge: document.getElementById('actBadge'),
       securityStatus: document.getElementById('securityStatus'),
+      // Buttons
+      btnModeCard: document.getElementById('btnModeCard'),
+      btnModeOrb: document.getElementById('btnModeOrb'),
+      btnModeHud: document.getElementById('btnModeHud'),
+      orbMenuTrigger: document.getElementById('orbMenuTrigger'),
+      hudMenuBtn: document.getElementById('hudMenuBtn'),
+      snapZone: document.getElementById('snap-zone'),
       // Keys UI
       keysModal: document.getElementById('keysModal'),
       keyList: document.getElementById('keyList'),
@@ -567,7 +660,10 @@
       vaultModal: document.getElementById('vaultModal'),
       vaultPass: document.getElementById('vaultPassInput'),
       vaultUnlock: document.getElementById('vaultUnlockBtn'),
-      vaultCancel: document.getElementById('vaultCancelBtn')
+      vaultCancel: document.getElementById('vaultCancelBtn'),
+      // New System UI
+      systemCard: document.getElementById('systemCard'),
+      toggleBtn: document.getElementById('toggleBtn')
     };
 
     // --- CRYPTO UTILS ---
@@ -575,13 +671,11 @@
       algo: { name: 'AES-GCM', length: 256 },
       pbkdf2: { name: 'PBKDF2', hash: 'SHA-256', iterations: 100000 },
       salt: window.crypto.getRandomValues(new Uint8Array(16)), 
-
       async getKey(password, salt) {
         const enc = new TextEncoder();
         const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
         return window.crypto.subtle.deriveKey({ ...this.pbkdf2, salt: salt }, keyMaterial, this.algo, false, ["encrypt", "decrypt"]);
       },
-
       async encrypt(data, password) {
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -591,7 +685,6 @@
         const bundle = { s: Array.from(salt), iv: Array.from(iv), d: Array.from(new Uint8Array(encrypted)) };
         return JSON.stringify(bundle);
       },
-
       async decrypt(bundleStr, password) {
         try {
           const bundle = JSON.parse(bundleStr);
@@ -605,8 +698,10 @@
       }
     };
 
-    // --- STATE ---
+    // --- STATE & PERSISTENCE ---
     const STORAGE_KEY = 'fusion_os_data_v2';
+    const UI_STATE_KEY = 'fusion_os_ui_state';
+    
     let STATE = {
       keys: [], 
       user: 'Convidado',
@@ -614,6 +709,41 @@
       encryptedData: null
     };
     let SESSION_PASSWORD = null;
+
+    function saveUIState() {
+        const mode = state.isOrb ? 'orb' : (state.isHud ? 'hud' : 'card');
+        const uiState = {
+            mode: mode,
+            left: els.card.style.left,
+            top: els.card.style.top,
+            zen: document.body.classList.contains('zen-mode')
+        };
+        localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
+    }
+    
+    function loadUIState() {
+        const raw = localStorage.getItem(UI_STATE_KEY);
+        if(!raw) return;
+        try {
+            const ui = JSON.parse(raw);
+            if(ui.zen) {
+                document.body.classList.add('zen-mode');
+                document.getElementById('mantra-toggle').classList.add('collapsed');
+                if(document.getElementById('zenModeCheckbox')) document.getElementById('zenModeCheckbox').checked = true;
+            }
+            if (ui.mode === 'orb' || ui.mode === 'hud') {
+                els.card.style.transition = 'none'; 
+                if (ui.mode === 'orb') {
+                    if(ui.left) els.card.style.left = ui.left;
+                    if(ui.top) els.card.style.top = ui.top;
+                    window.setMode('orb', true);
+                } else {
+                    window.setMode('hud', true);
+                }
+                setTimeout(() => els.card.style.transition = '', 200);
+            }
+        } catch(e) { console.error("UI Load Error", e); }
+    }
 
     function saveData() {
       const payload = { keys: STATE.keys, user: STATE.user };
@@ -640,18 +770,18 @@
       } else {
         STATE.keys = parsed.data.keys || [];
         STATE.user = parsed.data.user || 'Convidado';
-
-        // --- BRIDGE: SYNC ACTIVE KEY TO CHAT ---
+        
         const active = STATE.keys.find(k=>k.active);
         if(active && active.token) {
            localStorage.setItem('di_apiKey', active.token);
            if(typeof apiKey !== 'undefined') apiKey = active.token;
         }
-        // --- BRIDGE: SYNC USER NAME ---
+        
         if(STATE.user !== 'Convidado') {
            localStorage.setItem('di_userName', STATE.user);
            if(typeof userName !== 'undefined') userName = STATE.user;
            if(document.getElementById('userNameInput')) document.getElementById('userNameInput').value = STATE.user;
+           if(document.getElementById('inputUser')) document.getElementById('inputUser').value = STATE.user;
         }
 
         updateInterface(STATE.user);
@@ -683,7 +813,6 @@
       const line = `+${'-'.repeat(safe.length+4)}+`;
       els.actPre.innerText = `${line}\n| ${safe.toUpperCase()} |\n${line}\nID: ${hashStr(safe).toString(16)}`;
 
-      // Update TopInfo in Chat
       const tiUser = document.getElementById('displayUser');
       if(tiUser) tiUser.innerText = 'User: ' + safe;
     }
@@ -726,13 +855,10 @@
       if(!name){ showToaster('Nome obrigatório','error'); return; }
       const newKey = { id: Date.now().toString(36), name, token, webhook, active: STATE.keys.length===0 };
       STATE.keys.push(newKey);
-
-      // Auto-activate if first
       if(newKey.active && newKey.token) {
         localStorage.setItem('di_apiKey', newKey.token);
         if(typeof apiKey !== 'undefined') apiKey = newKey.token;
       }
-
       saveData(); renderKeysList(); updateInterface(STATE.user);
       els.keyName.value=''; els.keyToken.value=''; els.keyWebhook.value='';
       showToaster('Chave adicionada!', 'success');
@@ -745,28 +871,23 @@
       }
     };
 
-    // --- IMPORTANT: BRIDGE FUNCTION ---
     window.setActiveKey = (id) => {
       let activatedToken = null;
       STATE.keys.forEach(k=> {
         k.active = (k.id===id);
         if(k.active) activatedToken = k.token;
       });
-
       if(activatedToken) {
-        // Sync to Chat
         localStorage.setItem('di_apiKey', activatedToken);
         if(typeof apiKey !== 'undefined') apiKey = activatedToken;
-        // Update settings modal if present
         if(document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = activatedToken;
         showToaster('Chave sincronizada com o Chat.', 'success');
       }
-
       saveData(); renderKeysList(); updateInterface(STATE.user);
     };
 
     // --- VAULT EVENTS ---
-    els.testWebhookBtn.addEventListener('click', async () => { /* webhook test placeholder */ showToaster('Ping enviado (simulado)','success'); });
+    els.testWebhookBtn.addEventListener('click', async () => { showToaster('Ping enviado (simulado)','success'); });
     function openManager() {
       if (STATE.isEncrypted && !SESSION_PASSWORD) { els.vaultModal.style.display='flex'; els.vaultPass.focus(); } 
       else { els.keysModal.style.display='flex'; }
@@ -776,12 +897,9 @@
       try {
         const decrypted = await CRYPTO.decrypt(STATE.encryptedData, pass);
         SESSION_PASSWORD = pass; STATE.keys = decrypted.keys; STATE.user = decrypted.user;
-
-        // Sync on Unlock
         const active = STATE.keys.find(k=>k.active);
         if(active && active.token) { localStorage.setItem('di_apiKey', active.token); if(typeof apiKey !== 'undefined') apiKey = active.token; }
         if(STATE.user) { localStorage.setItem('di_userName', STATE.user); if(typeof userName !== 'undefined') userName = STATE.user; }
-
         els.vaultModal.style.display='none'; els.keysModal.style.display='flex'; els.vaultPass.value='';
         renderKeysList(); updateSecurityUI(); showToaster('Cofre destrancado.', 'success');
       } catch(e) { showToaster('Senha incorreta.', 'error'); }
@@ -791,10 +909,8 @@
          const newPass = prompt("Defina uma senha para o Cofre:");
          if(newPass) { SESSION_PASSWORD=newPass; saveData(); showToaster("Cofre trancado.", 'success'); }
        } else if (SESSION_PASSWORD) {
-         // Lock (clear current session password)
          SESSION_PASSWORD=null; els.keysModal.style.display='none'; showToaster("Sessão do cofre encerrada.", 'success');
        } else {
-         // If stored encrypted but no session password, prompt reset flow
          showToaster("Cofre já criptografado. Desbloqueie para redefinir.", 'error');
        }
        updateSecurityUI();
@@ -803,61 +919,249 @@
     els.closeKeysBtn.addEventListener('click', ()=> els.keysModal.style.display='none');
     els.addKeyBtn.addEventListener('click', addKey);
 
-    // --- GESTURES (ORB/HUD) ---
-    let state = { isOrb:false, isHud:false, isDragging:false, startX:0, startY:0, timer:null };
-    els.card.addEventListener('pointerdown', handleStart);
-    document.addEventListener('pointermove', handleMove);
-    document.addEventListener('pointerup', handleEnd);
+    // --- CINEMATIC GESTURES & MODES (REFINED V7) ---
+
+    let state = {
+        isOrb: false,
+        isHud: false,
+        isDragging: false,
+        timer: null,
+        startX: 0,
+        startY: 0,
+        dragOffsetX: 0,
+        dragOffsetY: 0,
+        pointerId: null
+    };
+
+    const HUD_SNAP_THRESHOLD = 60; // Distância do topo para snapar
+    const SWIPE_DOWN_THRESHOLD = 80; // Distância para puxar HUD
+    const LONG_PRESS_MS = 350; // Tempo para virar Orb via long press
+
+    // Passive: false para permitir preventDefault() se necessário
+    els.card.addEventListener('pointerdown', handleStart, { passive: false });
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    window.addEventListener('pointerup', handleEnd, { passive: false });
+
+    // Opening Configs
     els.avatarTgt.addEventListener('click', (e)=>{ if(!state.isOrb && !state.isHud) openManager(); });
+    els.orbMenuTrigger.addEventListener('click', (e)=>{ e.stopPropagation(); window.setMode('card'); toggleSection('systemCard', true); });
+    els.hudMenuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); window.setMode('card'); toggleSection('systemCard', true); });
+    
+    // Open Config from Header click in HUD Mode
+    els.header.addEventListener('click', (e) => {
+        if(state.isHud && !state.isDragging && !e.target.closest('.hud-menu-btn')) {
+             window.setMode('card');
+             toggleSection('systemCard', true);
+        }
+    });
+
+    els.card.addEventListener('contextmenu', (e)=>{
+        if(state.isOrb || state.isHud) { e.preventDefault(); window.setMode('card'); }
+    });
 
     function handleStart(e) {
-      if(e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.keys-card')) return;
+      // Ignorar interações internas (inputs, textareas)
+      if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'BUTTON' && !e.target.closest('.orb-menu-trigger'))) return;
+      
+      // No modo Card, só permitir arrastar pelo Header
       if(!state.isOrb && !state.isHud && !els.header.contains(e.target)) return;
-      state.startX=e.clientX; state.startY=e.clientY; state.isDragging=false;
+
+      state.startX = e.clientX;
+      state.startY = e.clientY;
+      state.pointerId = e.pointerId;
+
+      // Se já for Orb/Hud -> Iniciar arraste imediato
+      if(state.isOrb || state.isHud) {
+          state.isDragging = true;
+          try { els.card.setPointerCapture(e.pointerId); } catch(err){}
+          
+          const rect = els.card.getBoundingClientRect();
+          state.dragOffsetX = e.clientX - rect.left;
+          state.dragOffsetY = e.clientY - rect.top;
+          els.card.style.transition = 'none';
+          return;
+      }
+
+      // Se for Card: Iniciar timer de Long Press, mas monitorar movimento para "swipe up"
       state.timer = setTimeout(() => {
-        if(state.isOrb) openManager();
-        else if (!state.isHud) transmuteToOrb(e.clientX, e.clientY);
-      }, 600);
-      if(state.isOrb) { els.card.setPointerCapture(e.pointerId); const r=els.card.getBoundingClientRect(); state.offsetX=e.clientX-r.left; state.offsetY=e.clientY-r.top; }
+          transmuteToOrb(e);
+          saveUIState();
+      }, LONG_PRESS_MS);
     }
+    
     function handleMove(e) {
-      if(!state.timer && !state.isOrb) return;
-      if(Math.hypot(e.clientX-state.startX, e.clientY-state.startY)>10) {
-        if(state.timer){ clearTimeout(state.timer); state.timer=null; }
-        if(state.isOrb){ state.isDragging=true; els.card.style.left=(e.clientX-state.offsetX)+'px'; els.card.style.top=(e.clientY-state.offsetY)+'px'; els.card.style.transform='none'; }
+      // Detecção de Swipe Up / Side Drag no modo Card antes do timer acabar
+      if(!state.isOrb && !state.isHud && state.timer) {
+          const dx = e.clientX - state.startX;
+          const dy = e.clientY - state.startY;
+          const dist = Math.hypot(dx, dy);
+          
+          // Se moveu o suficiente (swipe), cancelar timer e virar Orb imediatamente
+          // Lógica: Se arrastar pra cima (dy < -10) ou muito pros lados (dx > 18)
+          if (dist > 12 && (dy < -10 || Math.abs(dx) > 18)) { 
+              clearTimeout(state.timer); state.timer = null;
+              
+              // Transmutar e continuar arrastando
+              transmuteToOrb(e); 
+              
+              // Recalcular offset para o drag não "pular"
+              const rect = els.card.getBoundingClientRect();
+              state.dragOffsetX = e.clientX - rect.left;
+              state.dragOffsetY = e.clientY - rect.top;
+              try { els.card.setPointerCapture(e.pointerId); } catch(err){}
+              els.card.style.transition = 'none';
+          }
+          
+          // Se foi um movimento pequeno (jitter), talvez cancelar se for scroll? 
+          // Deixamos o browser decidir o scroll se não for drag.
+      }
+    
+      if(!state.isDragging) return;
+
+      e.preventDefault(); // Prevenir scroll da página enquanto arrasta o Orb/HUD
+
+      if(state.isOrb) {
+          const x = e.clientX - state.dragOffsetX;
+          const y = e.clientY - state.dragOffsetY;
+          els.card.style.left = `${x}px`;
+          els.card.style.top = `${y}px`;
+          
+          if(y < HUD_SNAP_THRESHOLD) els.snapZone.classList.add('active');
+          else els.snapZone.classList.remove('active');
+
+      } else if (state.isHud) {
+          const deltaY = e.clientY - state.startY;
+          if(deltaY > 0) {
+             els.card.style.transform = `translateX(-50%) translateY(${deltaY * 0.4}px)`;
+             if(deltaY > SWIPE_DOWN_THRESHOLD) els.snapZone.classList.add('active');
+             else els.snapZone.classList.remove('active');
+          }
       }
     }
+    
     function handleEnd(e) {
       if(state.timer){ clearTimeout(state.timer); state.timer=null; }
-      if(state.isDragging && state.isOrb){ state.isDragging=false; snapOrb(e.clientX, e.clientY); return; }
-      if(Math.hypot(e.clientX-state.startX, e.clientY-state.startY)<10) {
-        if(state.isOrb || state.isHud) revertToCard(); else toggleCardState();
+      
+      if(state.isDragging) {
+          state.isDragging = false;
+          try { els.card.releasePointerCapture && els.card.releasePointerCapture(state.pointerId); } catch(err){}
+          els.card.style.transition = ''; 
+          els.snapZone.classList.remove('active');
+
+          if(state.isOrb) {
+              const rect = els.card.getBoundingClientRect();
+              if(rect.top < HUD_SNAP_THRESHOLD) {
+                  setMode('hud');
+              } else {
+                  saveUIState();
+              }
+          } else if (state.isHud) {
+              const deltaY = e.clientY - state.startY;
+              if (deltaY > SWIPE_DOWN_THRESHOLD) {
+                  const x = e.clientX - 34; 
+                  const y = e.clientY - 10;
+                  els.card.style.left = `${x}px`;
+                  els.card.style.top = `${y}px`;
+                  setMode('orb');
+              } else {
+                  els.card.style.transform = `translateX(-50%) translateY(0)`;
+              }
+          }
+      } else {
+          // Clique simples no header do Card (Toggle)
+          if(!state.isOrb && !state.isHud && els.header.contains(e.target)) {
+               toggleCardState();
+          }
       }
+      state.pointerId = null;
     }
-    function transmuteToOrb(x,y) {
-      if(navigator.vibrate) navigator.vibrate(50);
-      els.card.classList.add('orb','closed'); els.card.classList.remove('content-visible');
-      els.card.style.left=(x-34)+'px'; els.card.style.top=(y-34)+'px';
+    
+    function transmuteToOrb(eOrX) {
+      // Aceita evento ou coordenadas, mas preferimos evento para capturar pointer
+      let x, y, ev;
+      if(eOrX && eOrX.clientX !== undefined) { ev = eOrX; x = ev.clientX; y = ev.clientY; }
+      else { return; } // Precisa de evento para fluidez total
+
+      if(navigator.vibrate) navigator.vibrate(40);
+      els.card.classList.add('orb','closed'); 
+      els.card.classList.remove('content-visible');
+      
+      // Centralizar visualmente (será sobrescrito pelo drag move imediato)
+      els.card.style.left = (x - 34) + 'px'; 
+      els.card.style.top = (y - 34) + 'px';
+      
       state.isOrb=true; state.isHud=false;
+      
+      // Iniciar drag imediatamente
+      state.isDragging = true;
+      if(ev && ev.pointerId) {
+          state.pointerId = ev.pointerId;
+          try { els.card.setPointerCapture(ev.pointerId); } catch(e){}
+          const rect = els.card.getBoundingClientRect();
+          state.dragOffsetX = x - rect.left;
+          state.dragOffsetY = y - rect.top;
+      }
+
+      updateModeButtons('orb');
     }
-    function snapOrb(x,y) {
-      if(y < 80) { state.isHud=true; state.isOrb=false; els.card.classList.add('hud'); els.card.classList.remove('orb'); els.card.style.left=''; els.card.style.top=''; els.card.style.transform=''; } 
-      else { const tx=x<window.innerWidth/2?15:window.innerWidth-83; els.card.style.transition='left 0.4s ease, top 0.4s ease'; els.card.style.left=tx+'px'; setTimeout(()=>els.card.style.transition='',400); }
-    }
+
     function revertToCard() {
       state.isOrb=false; state.isHud=false;
-      els.card.style.transition='all 0.5s var(--ease-smooth)'; els.card.style.left=''; els.card.style.top=''; els.card.style.width=''; els.card.style.height=''; els.card.style.transform='';
-      els.card.classList.remove('orb','hud','closed'); setTimeout(()=>els.card.classList.add('content-visible'),300);
+      els.card.style.transition='all 0.5s var(--ease-smooth)'; 
+      els.card.style.left=''; els.card.style.top=''; 
+      els.card.style.width=''; els.card.style.height=''; 
+      els.card.style.transform='';
+      els.card.classList.remove('orb','hud','closed'); 
+      setTimeout(()=>els.card.classList.add('content-visible'),300);
     }
+    
+    window.setMode = (mode, isInitialLoad = false) => {
+        updateModeButtons(mode);
+
+        if(mode === 'card') {
+            revertToCard();
+        } else if (mode === 'orb') {
+            state.isOrb = true; state.isHud = false;
+            els.card.classList.add('orb', 'closed');
+            els.card.classList.remove('hud', 'content-visible');
+            els.card.style.transform = 'none';
+        } else if (mode === 'hud') {
+            state.isHud = true; state.isOrb = false;
+            els.card.classList.add('hud', 'closed'); 
+            els.card.classList.remove('orb', 'content-visible');
+            els.card.style.top = ''; 
+            els.card.style.left = ''; 
+            els.card.style.transform = '';
+        }
+        
+        if(!isInitialLoad) saveUIState();
+    };
+
+    function updateModeButtons(mode) {
+        [els.btnModeCard, els.btnModeOrb, els.btnModeHud].forEach(b=>b.classList.remove('active-mode'));
+        if(mode==='card') els.btnModeCard.classList.add('active-mode');
+        if(mode==='orb') els.btnModeOrb.classList.add('active-mode');
+        if(mode==='hud') els.btnModeHud.classList.add('active-mode');
+    }
+
     function toggleCardState() {
       if(els.card.classList.contains('animating')) return;
       const isClosed=els.card.classList.contains('closed'); els.card.classList.add('animating');
       if(isClosed) { els.card.classList.remove('closed'); els.card.animate([{transform:'scale(0.95)',opacity:0.8},{transform:'scale(1)',opacity:1}],{duration:400}).onfinish=()=>{els.card.classList.remove('animating');els.card.classList.add('content-visible');} }
       else { els.card.classList.remove('content-visible'); els.card.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(10px)',opacity:1}],{duration:200}).onfinish=()=>{els.card.classList.add('closed');els.card.classList.remove('animating');} }
     }
+    
+    // Helpers
     function escapeHtml(s){ return s ? s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) : ''; }
     function showToaster(txt,type='default'){ const t=document.createElement('div'); t.className=`toaster ${type}`; t.innerText=txt; document.getElementById('toasterWrap').appendChild(t); setTimeout(()=>t.classList.add('show'),10); setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300)},2500); }
-    function toggleActivation(){ const h=els.actCard.classList.contains('activation-hidden'); els.actCard.classList.toggle('activation-hidden',!h); els.actCard.classList.toggle('activation-open',h); }
+    function toggleSection(id, forceOpen = false){ 
+        const el = document.getElementById(id);
+        const h = el.classList.contains('activation-hidden'); 
+        if(forceOpen && !h) return; // Already open
+        el.classList.toggle('activation-hidden', !forceOpen && !h); 
+        el.classList.toggle('activation-open', forceOpen || h); 
+    }
+    window.toggleActivation = () => toggleSection('activationCard');
 
     // Logic Init
     els.input.addEventListener('input', (e)=>{ 
@@ -866,7 +1170,15 @@
        if(typeof userName !== 'undefined') userName=STATE.user;
        updateInterface(e.target.value); saveData(); 
     });
-    setTimeout(()=>{ els.card.classList.add('active'); els.avatarTgt.classList.add('shown'); loadData(); }, 100);
+    
+    // INITIAL LOAD
+    setTimeout(()=>{ 
+        els.card.classList.add('active'); 
+        els.avatarTgt.classList.add('shown'); 
+        loadData(); 
+        loadUIState(); 
+        updateChatUI();
+    }, 100);
     setInterval(()=>{ els.clock.innerText = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); },1000);
   </script>
 
@@ -881,7 +1193,7 @@
     let conversation = [];
     let pages = [], currentPage = 0, autoAdvance = true;
 
-    // Configs (Synced with Card)
+    // Configs
     let apiKey = localStorage.getItem('di_apiKey') || '';
     let modelName = localStorage.getItem('di_modelName') || 'meta-llama/llama-4-maverick:free';
     let userName = localStorage.getItem('di_userName') || '';
@@ -895,13 +1207,32 @@
        const iEl = document.getElementById('displayInfodose');
        if(uEl) uEl.innerText = 'User: ' + (userName || '—');
        if(iEl) iEl.innerText = 'Infodose: ' + (infodoseName || '—');
-       // Update settings inputs
+       
+       // Settings Inputs
        if(document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = apiKey;
        if(document.getElementById('modelInput')) document.getElementById('modelInput').value = modelName;
-       if(document.getElementById('userNameInput')) document.getElementById('userNameInput').value = userName;
+       if(document.getElementById('infodoseNameInput')) document.getElementById('infodoseNameInput').value = infodoseName;
+       
+       // Toggles
+       if(document.getElementById('assistantActiveCheckbox')) document.getElementById('assistantActiveCheckbox').checked = assistantEnabled;
+       if(document.getElementById('trainingActiveCheckbox')) document.getElementById('trainingActiveCheckbox').checked = trainingActive;
+       
+       // Update Chat Toggle Button Visual
+       updateToggleBtnVisual();
+    }
+    
+    function updateToggleBtnVisual() {
+        const btn = els.toggleBtn;
+        if(assistantEnabled) {
+            btn.classList.add('active');
+            btn.title = "Assistant ON";
+        } else {
+            btn.classList.remove('active');
+            btn.title = "Assistant OFF";
+        }
     }
 
-    // TTS
+    // TTS Logic ... (Same as before)
     const speakText = (txt, onend)=> {
       if (!txt) { if (onend) onend(); return; }
       const u = new SpeechSynthesisUtterance(txt);
@@ -938,7 +1269,6 @@
         tris.forEach((body, j) => {
           const cls = j===0?'intro': j===1?'middle':'ending';
           const b = createEl('div','response-block '+cls,`<h3>${titles[j]}</h3><p>${body}</p>`);
-          // Meta Crystal
           const meta = createEl('div','meta');
           const crystalBtn = createEl('button','crystal-btn','✶');
           crystalBtn.title = 'Cristalizar';
@@ -956,6 +1286,7 @@
               b.classList.add('expanded'); b.dataset.state = '';
               if (!assistantEnabled) {
                 assistantEnabled = true; localStorage.setItem('di_assistantEnabled','1');
+                updateToggleBtnVisual();
                 if (training && trainingActive) conversation.unshift({ role:'system', content: training });
               }
               const blockText = `${titles[j]}\n\n${body}`;
@@ -996,11 +1327,10 @@
     };
 
     async function callAI() {
-      // Re-read apiKey to be safe
       apiKey = localStorage.getItem('di_apiKey') || apiKey;
 
       if (!apiKey) {
-        alert('Nenhuma API Key ativa! Ative uma chave no Card (Cofre) ou nas Configurações.');
+        alert('Nenhuma API Key ativa! Ative uma chave no Card (Cofre) ou no Painel.');
         return;
       }
       const bodyObj = { model: modelName, messages: conversation.slice(), temperature: TEMPERATURE };
@@ -1038,12 +1368,21 @@
 
       if (raw.toLowerCase().includes('oi dual')) {
         assistantEnabled = true; localStorage.setItem('di_assistantEnabled','1');
+        updateToggleBtnVisual();
         showLoading('Conectando Dual Infodose...');
         if (training && trainingActive) conversation.unshift({ role:'system', content: training });
       } else { showLoading('Processando...'); }
       conversation.push({ role:'user', content: raw });
       callAI();
     }
+    
+    // Quick Toggle Action
+    els.toggleBtn.addEventListener('click', () => {
+        assistantEnabled = !assistantEnabled;
+        localStorage.setItem('di_assistantEnabled', assistantEnabled ? '1' : '0');
+        showToaster(assistantEnabled ? 'Assistant ON (Fetch Ativo)' : 'Assistant OFF (Fetch Desativado)', assistantEnabled ? 'success' : 'default');
+        updateChatUI();
+    });
 
     function cristalizar({ title, content }) {
       const list = JSON.parse(localStorage.getItem(CRYSTAL_KEY) || '[]');
@@ -1071,50 +1410,52 @@
     document.addEventListener('DOMContentLoaded', async () => {
       speechSynthesis.onvoiceschanged = () => { window._vozes = speechSynthesis.getVoices(); };
 
-      // Init Particles
       try {
         particlesJS('particles-js',{ particles:{ number:{value:24},color:{value:['#0ff','#f0f']}, shape:{type:'circle'},opacity:{value:0.4},size:{value:2.4}, move:{enable:true,speed:1.5} }, retina_detect:true });
       } catch(e) { console.warn('particlesJS init failed', e); }
 
-      // Buttons
       document.getElementById('sendBtn').addEventListener('click', sendMessage);
       document.getElementById('userInput').addEventListener('keypress', e => { if (e.key==='Enter') sendMessage(); });
       document.querySelector('[data-action="prev"]').addEventListener('click', () => changePage(-1));
       document.querySelector('[data-action="next"]').addEventListener('click', () => changePage(1));
 
-      // Settings
-      const setModal = document.getElementById('settingsModal');
-      document.getElementById('settingsBtn').addEventListener('click', () => {
-         updateChatUI(); setModal.classList.add('active');
-      });
-      document.getElementById('saveSettings').addEventListener('click', () => {
-         apiKey = document.getElementById('apiKeyInput').value.trim();
-         modelName = document.getElementById('modelInput').value.trim();
-         localStorage.setItem('di_apiKey', apiKey); localStorage.setItem('di_modelName', modelName);
-         setModal.classList.remove('active');
-      });
-      document.getElementById('cancelSettings').addEventListener('click', ()=>setModal.classList.remove('active'));
-
-      // Toggle Panel
-      const togPanel = document.getElementById('togglePanel');
-      document.getElementById('toggleBtn').addEventListener('click', () => {
-         updateChatUI();
-         document.getElementById('assistantActiveCheckbox').checked = assistantEnabled;
-         document.getElementById('trainingActiveCheckbox').checked = trainingActive;
-         togPanel.classList.add('active');
-      });
-      document.getElementById('savePanelBtn').addEventListener('click', () => {
-         userName = document.getElementById('userNameInput').value.trim();
+      document.getElementById('saveSystemBtn').addEventListener('click', () => {
          infodoseName = document.getElementById('infodoseNameInput').value.trim();
          assistantEnabled = document.getElementById('assistantActiveCheckbox').checked;
          trainingActive = document.getElementById('trainingActiveCheckbox').checked;
-         localStorage.setItem('di_userName', userName); localStorage.setItem('di_infodoseName', infodoseName);
+         
+         const newKey = document.getElementById('apiKeyInput').value.trim();
+         const newModel = document.getElementById('modelInput').value.trim();
+         
+         if(newKey) {
+             apiKey = newKey;
+             localStorage.setItem('di_apiKey', apiKey);
+             if(typeof STATE !== 'undefined') {
+                 const active = STATE.keys.find(k=>k.active);
+                 if(active) { active.token = newKey; saveData(); }
+             }
+         }
+         
+         modelName = newModel || modelName;
+         localStorage.setItem('di_modelName', modelName);
+
+         const zen = document.getElementById('zenModeCheckbox').checked;
+         if(zen) { 
+             document.body.classList.add('zen-mode');
+             document.getElementById('mantra-toggle').classList.add('collapsed');
+         } else {
+             document.body.classList.remove('zen-mode');
+             document.getElementById('mantra-toggle').classList.remove('collapsed');
+         }
+         saveUIState(); 
+
+         localStorage.setItem('di_infodoseName', infodoseName);
          localStorage.setItem('di_assistantEnabled', assistantEnabled?'1':'0'); localStorage.setItem('di_trainingActive', trainingActive?'1':'0');
-         updateChatUI(); togPanel.classList.remove('active');
-         // Sync User back to Card
-         if(typeof STATE !== 'undefined') { STATE.user = userName; updateInterface(userName); saveData(); }
+         
+         updateChatUI();
+         toggleSection('systemCard', false);
+         showToaster('Configurações Salvas', 'success');
       });
-      document.getElementById('closePanelBtn').addEventListener('click', ()=>togPanel.classList.remove('active'));
 
       // Crystal
       document.getElementById('crystalBtn').addEventListener('click', ()=>{ refreshCrystalList(); document.getElementById('crystalModal').classList.add('active'); });
@@ -1127,20 +1468,15 @@
       });
       document.getElementById('clearAllCrystal').addEventListener('click', ()=>{ localStorage.removeItem(CRYSTAL_KEY); refreshCrystalList(); });
 
-      // Init UI
       updateChatUI();
 
-      // --- ADDED: missing button handlers (copy/paste, training import/export, keys import/export, activation actions) ---
-
-      // Helper to gather response text
+      // --- ADDED: missing button handlers ---
       function getAllResponseText() {
         const blocks = Array.from(document.querySelectorAll('.response-block p')).map(p=>p.innerText.trim()).filter(Boolean);
         if(blocks.length) return blocks.join('\n\n');
         const resp = document.getElementById('response');
         return resp ? resp.innerText.trim() : '';
       }
-
-      // Copy all response text
       const copyBtn = document.querySelector('.control-btn.copy-button');
       if (copyBtn) copyBtn.addEventListener('click', async () => {
         try {
@@ -1149,8 +1485,6 @@
           showToaster('Texto copiado', 'success');
         } catch (e) { showToaster('Falha ao copiar', 'error'); console.error(e); }
       });
-
-      // Paste from clipboard into userInput
       const pasteBtn = document.querySelector('.control-btn.paste-button');
       if (pasteBtn) pasteBtn.addEventListener('click', async () => {
         try {
@@ -1159,8 +1493,6 @@
           if (ui) { ui.value = txt; ui.focus(); showToaster('Conteúdo colado no campo', 'success'); }
         } catch (e) { showToaster('Falha ao colar (permissão negada?)', 'error'); console.error(e); }
       });
-
-      // Activation copy and download
       const copyAct = document.getElementById('copyActBtn');
       if (copyAct) copyAct.addEventListener('click', async () => {
         try {
@@ -1173,7 +1505,6 @@
       if (downloadAct) downloadAct.addEventListener('click', async () => {
         try {
           const node = document.getElementById('actPre');
-          // use html2canvas to render pre as image
           const canvas = await html2canvas(node, { backgroundColor: null, scale: 2 });
           canvas.toBlob(blob => {
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ativacao.png'; a.click();
@@ -1184,12 +1515,10 @@
 
       // Training import/export
       const trainingInput = document.getElementById('trainingUpload');
-      const importTrainingBtn = document.getElementById('importTrainingBtn');
       const exportTrainingBtn = document.getElementById('exportTrainingBtn');
       const trainingNameEl = document.getElementById('trainingFileName');
 
-      if (importTrainingBtn && trainingInput) {
-        importTrainingBtn.addEventListener('click', () => trainingInput.click());
+      if (trainingInput) {
         trainingInput.addEventListener('change', async (ev) => {
           const f = ev.target.files && ev.target.files[0];
           if (!f) return;
@@ -1251,7 +1580,335 @@
       }
     });
   </script>
+<!-- ====== START: Smart Code Renderer (paste before </body>) ====== -->
+<style>
+/* Smart Code Renderer styles (minimal, responsive) */
+.smart-code-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(0,0,0,0.45);border-bottom:1px solid rgba(255,255,255,0.04);font-family:var(--font-ui);font-size:0.85rem}
+.smart-code-left{display:flex;gap:8px;align-items:center}
+.smart-code-label{font-weight:700;color:var(--neon-cyan);letter-spacing:1px}
+.smart-code-actions{display:flex;gap:8px;align-items:center}
+.code-block{background:linear-gradient(180deg,rgba(10,10,12,0.9),rgba(6,6,8,0.92));border:1px solid rgba(255,255,255,0.03);border-radius:10px;overflow:hidden;margin-top:8px}
+.code-block pre{margin:0;padding:12px;white-space:pre;overflow:auto;font-family:var(--font-code);font-size:0.82rem;line-height:1.4;color:#e6f9ff}
+.code-meta{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,0.02);font-size:0.78rem}
+.code-meta .lang{font-weight:700;color:rgba(255,255,255,0.85)}
+.code-actions button{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;color:var(--neon-cyan);cursor:pointer;font-weight:700}
+.code-actions button.copy-code{color:var(--neon-success)}
+.code-actions button.run-preview{color:var(--neon-gold)}
+.preview-wrap{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.preview-iframe{width:100%;min-height:220px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#000;overflow:hidden}
+.preview-controls{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.small-note{font-size:0.75rem;color:rgba(255,255,255,0.55)}
+@media(min-width:900px){ .preview-wrap{flex-direction:row;gap:12px} .code-block{flex:1} .preview-iframe{width:45%} }
+.smart-toolbar-input{background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px;color:#fff;font-family:var(--font-code);font-size:0.78rem}
+.crystal-badge{background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.03);padding:6px 8px;border-radius:999px;color:var(--neon-purple);font-weight:700}
+</style>
 
+<script>
+(function(){
+
+/* ======= Smart Renderer: overwrite existing renderPaginatedResponse ======= */
+/* This script expects splitBlocks(text) to exist (your file already has it). If not, a fallback is included. */
+
+function markdownToHtml(md){
+  if(!md) return '';
+  // basic escapes
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // code blocks handled earlier; here we do inline transformations
+  let out = esc(md);
+  // headings
+  out = out.replace(/^###### (.*$)/gim,'<h6>$1</h6>')
+           .replace(/^##### (.*$)/gim,'<h5>$1</h5>')
+           .replace(/^#### (.*$)/gim,'<h4>$1</h4>')
+           .replace(/^### (.*$)/gim,'<h3>$1</h3>')
+           .replace(/^## (.*$)/gim,'<h2>$1</h2>')
+           .replace(/^# (.*$)/gim,'<h1>$1</h1>');
+  // bold **text**
+  out = out.replace(/(\*\*|__)(.*?)\1/gm,'<strong>$2</strong>');
+  // italic *text*
+  out = out.replace(/(\*|_)(.*?)\1/gm,'<em>$2</em>');
+  // inline code `code`
+  out = out.replace(/`([^`]+)`/g,'<code>$1</code>');
+  // links [text](url)
+  out = out.replace(/$begin:math:display$\(\[\^$end:math:display$]+)\]$begin:math:text$\(https\?\:\\\/\\\/\[\^\\s\)\]\+\)$end:math:text$/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  // unordered lists
+  out = out.replace(/^\s*[-*]\s+(.*)/gm,'<li>$1</li>');
+  out = out.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
+  // paragraphs (naive)
+  out = out.replace(/(?:\r\n|\r|\n){2,}/g,'\n\n'); // normalize
+  const lines = out.split('\n\n').map(s=> s.trim()).filter(Boolean).map(s=>{
+    if(/^<h|^<ul|^<pre|^<blockquote|^<h/.test(s)) return s;
+    return '<p>'+s+'</p>';
+  });
+  return lines.join('\n');
+}
+
+function escapeHTML(s){
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function parseFencedCodeBlocks(text){
+  // returns array of {type:'text'|'code', lang, content}
+  const parts = [];
+  let lastIndex = 0;
+  const re = /```(\w+)?\n([\s\S]*?)```/g;
+  let m;
+  while((m = re.exec(text)) !== null){
+    if(m.index > lastIndex){
+      parts.push({type:'text', content: text.slice(lastIndex, m.index)});
+    }
+    parts.push({type:'code', lang: m[1] || 'text', content: m[2]});
+    lastIndex = re.lastIndex;
+  }
+  if(lastIndex < text.length) parts.push({type:'text', content: text.slice(lastIndex)});
+  return parts;
+}
+
+/* Helpers for resources (CloudMirror / Allo Scripts / Allo Service) saved in localStorage */
+const RESOURCE_KEYS = {
+  CLOUD: 'sr_cloudmirror_urls',
+  ALLO_SCRIPTS: 'sr_allo_scripts',
+  ALLO_SERVICE: 'sr_allo_service'
+};
+
+function getResourceList(key){
+  try{ return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ return []; }
+}
+function addResource(key, url){
+  const arr = getResourceList(key);
+  if(!url) return;
+  if(!arr.includes(url)) arr.unshift(url);
+  localStorage.setItem(key, JSON.stringify(arr.slice(0,8)));
+}
+function getAllResources(){
+  return [...getResourceList(RESOURCE_KEYS.CLOUD), ...getResourceList(RESOURCE_KEYS.ALLO_SCRIPTS), ...getResourceList(RESOURCE_KEYS.ALLO_SERVICE)];
+}
+
+/* Create the code/preview node for a given code block */
+function createCodePreviewNode(lang, code){
+  const container = document.createElement('div');
+  container.className = 'code-block';
+
+  // header/meta
+  const meta = document.createElement('div'); meta.className = 'code-meta';
+  meta.innerHTML = `<div class="lang">${(lang||'txt').toUpperCase()}</div><div class="small-note">Sandbox preview available</div>`;
+  container.appendChild(meta);
+
+  // code + copy
+  const pre = document.createElement('pre'); const codeEl = document.createElement('code');
+  codeEl.innerText = code;
+  pre.appendChild(codeEl);
+  container.appendChild(pre);
+
+  // actions row
+  const actions = document.createElement('div'); actions.className = 'smart-code-toolbar';
+  actions.innerHTML = `
+    <div class="smart-code-left"><div class="smart-code-label">Code</div></div>
+    <div class="smart-code-actions code-actions">
+      <button class="copy-code" title="Copiar código">COPIAR</button>
+      <button class="run-preview" title="Rodar no sandbox (allow-scripts)">RUN</button>
+      <button class="download-z" title="Baixar (Z)">Z</button>
+      <button class="resource-config" title="Configurar CDN/CloudMirror">CDN+</button>
+      <button class="crystalize-btn" title="Cristalizar">✶</button>
+    </div>
+  `;
+  container.insertBefore(actions, pre);
+
+  // preview iframe
+  const previewWrap = document.createElement('div'); previewWrap.className = 'preview-wrap';
+  const iframe = document.createElement('iframe');
+  iframe.className = 'preview-iframe';
+  iframe.setAttribute('sandbox','allow-scripts'); // important: scripts run but can't access parent (no allow-same-origin)
+  iframe.setAttribute('scrolling','auto');
+  previewWrap.appendChild(iframe);
+
+  // preview controls (resource list summary)
+  const pcontrols = document.createElement('div'); pcontrols.className='preview-controls small-note';
+  pcontrols.innerHTML = `<span class="small-note">Recursos: <span class="res-count">0</span></span>`;
+  previewWrap.appendChild(pcontrols);
+
+  container.appendChild(previewWrap);
+
+  // wire buttons
+  actions.querySelector('.copy-code').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(code); showToaster('Código copiado', 'success'); } catch(e){ showToaster('Erro copiar', 'error'); }
+  });
+
+  actions.querySelector('.download-z').addEventListener('click', () => {
+    const blob = new Blob([code], { type: lang==='html' ? 'text/html' : 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = ( (lang==='html') ? 'snippet.html' : 'snippet.txt' );
+    // Button label specifically should be 'Z'
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+
+  actions.querySelector('.crystalize-btn').addEventListener('click', () => {
+    // Call your app's cristalizar if exists; fallback to local storage
+    const payload = { id: Date.now(), title: `Code ${lang.toUpperCase()}`, content: code, at: new Date().toISOString() };
+    if(typeof window.cristalizar === 'function'){
+      try{ window.cristalizar({ title: payload.title, content: code }); showToaster('Cristalizado (integrado)', 'success'); return; } catch(e){ console.warn('crystal integrate failed', e); }
+    }
+    // fallback
+    const KEY = 'sr_local_crystals';
+    const arr = JSON.parse(localStorage.getItem(KEY)||'[]'); arr.unshift(payload); localStorage.setItem(KEY, JSON.stringify(arr));
+    showToaster('Cristalizado (local)', 'success');
+  });
+
+  actions.querySelector('.resource-config').addEventListener('click', async () => {
+    // prompt for adding resource; basic UX
+    const kind = prompt('Tipo de recurso a adicionar:\n1 - CloudMirror\n2 - Allo Scripts\n3 - Allo Service\n(Escolha 1,2 ou 3)');
+    if(!kind) return;
+    const url = prompt('Cole a URL do CDN/Script (https://...)');
+    if(!url) return;
+    if(kind==='1') addResource(RESOURCE_KEYS.CLOUD, url);
+    if(kind==='2') addResource(RESOURCE_KEYS.ALLO_SCRIPTS, url);
+    if(kind==='3') addResource(RESOURCE_KEYS.ALLO_SERVICE, url);
+    pcontrols.querySelector('.res-count').innerText = getAllResources().length;
+    showToaster('Recurso adicionado', 'success');
+  });
+
+  actions.querySelector('.run-preview').addEventListener('click', () => {
+    // build srcdoc with optional resources
+    const resources = getAllResources();
+    const headParts = [];
+    for(const r of resources){
+      if(/\.css($|\?)/i.test(r)) headParts.push(`<link rel="stylesheet" href="${escapeHTML(r)}">`);
+      else headParts.push(`<script src="${escapeHTML(r)}"></script>`);
+    }
+    // If the block is NOT html (e.g., js / css), we wrap a small HTML to run it
+    let srcdoc = '';
+    if(lang && lang.toLowerCase().startsWith('html')){
+      srcdoc = `<!doctype html><html><head>${headParts.join('')}</head><body>${code}</body></html>`;
+    } else if(lang && (lang.toLowerCase().startsWith('js') || lang.toLowerCase()==='javascript')){
+      srcdoc = `<!doctype html><html><head>${headParts.join('')}</head><body><script>${code}<\/script></body></html>`;
+    } else if(lang && lang.toLowerCase().startsWith('css')){
+      srcdoc = `<!doctype html><html><head>${headParts.join('')}<style>${code}<\/style></head><body></body></html>`;
+    } else {
+      // plain text: show inside pre
+      srcdoc = `<!doctype html><html><head>${headParts.join('')}</head><body><pre style="white-space:pre-wrap;font-family:monospace;padding:12px">${escapeHTML(code)}</pre></body></html>`;
+    }
+    iframe.srcdoc = srcdoc;
+    pcontrols.querySelector('.res-count').innerText = resources.length;
+  });
+
+  // initial resource count
+  pcontrols.querySelector('.res-count').innerText = getAllResources().length;
+
+  return container;
+}
+
+/* Replace (override) the existing renderPaginatedResponse function */
+window.renderPaginatedResponse = function(text){
+  speechSynthesis.cancel && speechSynthesis.cancel();
+  autoAdvance = true;
+  const respEl = document.getElementById('response');
+  if(!respEl) return;
+  // remove old pages (keep .initial if present)
+  respEl.querySelectorAll('.page:not(.initial)').forEach(p=>p.remove());
+  pages = [];
+  // reuse existing splitBlocks if available; fallback
+  const groups = (typeof splitBlocks === 'function') ? splitBlocks(text) : (function(){
+    // fallback: split into paragraphs groups of 3
+    const paras = (text||'').split(/\n\s*\n/).filter(Boolean);
+    const g = []; for(let i=0;i<paras.length;i+=3) g.push(paras.slice(i,i+3)); return g.length ? g : [[text,'','']];
+  })();
+
+  const titles = ['🎁 Recompensa Inicial','👁️ Exploração e Curiosidade','⚡ Antecipação Vibracional'];
+
+  groups.forEach((tris, gi) => {
+    const page = document.createElement('div'); page.className = (gi===0 ? 'page active' : 'page');
+
+    tris.forEach((body, j) => {
+      const cls = (j===0 ? 'intro' : j===1 ? 'middle' : 'ending');
+      const block = document.createElement('div'); block.className = 'response-block '+cls;
+      const header = document.createElement('h3'); header.innerText = titles[j];
+      const meta = document.createElement('div'); meta.className = 'meta';
+      // crystal button (reuse existing)
+      const crystalBtn = document.createElement('button'); crystalBtn.className='crystal-btn'; crystalBtn.title='Cristalizar'; crystalBtn.innerText='✶';
+      crystalBtn.addEventListener('click', ev=>{
+        ev.stopPropagation();
+        if(typeof window.cristalizar === 'function'){
+          window.cristalizar({ title: titles[j], content: body });
+          crystalBtn.innerText = '✓'; setTimeout(()=> crystalBtn.innerText = '✶', 1200);
+        } else {
+          const KEY='sr_local_crystals';
+          const arr=JSON.parse(localStorage.getItem(KEY)||'[]'); arr.unshift({id:Date.now(),title:titles[j],content:body,at:new Date().toISOString()}); localStorage.setItem(KEY,JSON.stringify(arr));
+          crystalBtn.innerText = '✓'; setTimeout(()=> crystalBtn.innerText = '✶', 1200);
+        }
+      });
+      meta.appendChild(crystalBtn);
+
+      block.appendChild(meta);
+      block.appendChild(header);
+
+      // detect fenced code blocks
+      const parts = parseFencedCodeBlocks(body);
+      parts.forEach(p => {
+        if(p.type === 'code'){
+          const codeNode = createCodePreviewNode(p.lang, p.content);
+          block.appendChild(codeNode);
+        } else {
+          // plain text part may include markdown -> convert and append
+          const html = markdownToHtml(p.content);
+          const div = document.createElement('div'); div.innerHTML = html;
+          block.appendChild(div);
+        }
+      });
+
+      // click behavior: speak or call AI like previous logic
+      block.dataset.state = '';
+      block.addEventListener('click', () => {
+        const bodyText = block.innerText || body;
+        if (!block.dataset.state) {
+          speechSynthesis.cancel(); speakText(bodyText); block.classList.add('clicked'); block.dataset.state = 'spoken';
+        } else {
+          block.classList.add('expanded'); block.dataset.state = '';
+          if (!assistantEnabled) {
+            assistantEnabled = true; localStorage.setItem('di_assistantEnabled','1');
+            updateToggleBtnVisual();
+            if (training && trainingActive) conversation.unshift({ role:'system', content: training });
+          }
+          const blockText = `${titles[j]}\n\n${body}`;
+          showLoading('Pulso em Expansão...'); speakText('Pulso em Expansão...');
+          conversation.push({ role:'user', content: blockText });
+          callAI();
+        }
+      });
+
+      page.appendChild(block);
+    });
+
+    page.appendChild( (function(){ const p = document.createElement('p'); p.className='footer-text'; p.innerHTML = '<em>Do seu jeito. <strong>Sempre</strong> único. <strong>Sempre</strong> seu.</em>'; return p; })() );
+    const controls = respEl.querySelector('.response-controls');
+    respEl.insertBefore(page, controls);
+    pages.push(page);
+  });
+
+  currentPage = 0; document.getElementById('pageIndicator').textContent = `1 / ${pages.length}`;
+  // speak first page
+  (function speakPage(i){
+    const page = pages[i]; if(!page) return;
+    const body = Array.from(page.querySelectorAll('.response-block')).map(b=>b.innerText).join(' ');
+    speakText(body, () => {
+      if(!autoAdvance) return;
+      if(i < pages.length - 1){ changePage(1); speakPage(i+1); } else { speakText('Sempre único, sempre seu.'); }
+    });
+  })(0);
+};
+
+/* small helper toaster fallback if showToaster not available */
+function showToaster(msg, type){
+  if(typeof window.showToaster === 'function'){ window.showToaster(msg, type); return; }
+  const t = document.createElement('div'); t.style.position='fixed'; t.style.right='18px'; t.style.bottom='18px'; t.style.padding='10px 14px';
+  t.style.background = (type==='error') ? 'rgba(255,20,20,0.12)' : 'rgba(0,255,150,0.06)'; t.style.border='1px solid rgba(255,255,255,0.06)'; t.style.color='#fff'; t.style.zIndex=999999;
+  t.innerText = msg; document.body.appendChild(t); setTimeout(()=> t.remove(),2200);
+}
+
+/* Initialize resource count in existing previews (if any) */
+document.querySelectorAll('.code-block .preview-controls .res-count').forEach(el=>el.innerText = getAllResources().length);
+
+})(); // IIFE
+</script>
+<!-- ====== END: Smart Code Renderer ====== -->
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
@@ -1262,3 +1919,5 @@
 
 </body>
 </html>
+
+

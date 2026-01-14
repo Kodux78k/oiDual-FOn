@@ -1580,324 +1580,196 @@
       }
     });
   </script>
-<!-- ====== START: Smart Code Renderer (paste before </body>) ====== -->
-<style>
-/* Smart Code Renderer styles (minimal, responsive) */
-.smart-code-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(0,0,0,0.45);border-bottom:1px solid rgba(255,255,255,0.04);font-family:var(--font-ui);font-size:0.85rem}
-.smart-code-left{display:flex;gap:8px;align-items:center}
-.smart-code-label{font-weight:700;color:var(--neon-cyan);letter-spacing:1px}
-.smart-code-actions{display:flex;gap:8px;align-items:center}
-.code-block{background:linear-gradient(180deg,rgba(10,10,12,0.9),rgba(6,6,8,0.92));border:1px solid rgba(255,255,255,0.03);border-radius:10px;overflow:hidden;margin-top:8px}
-.code-block pre{margin:0;padding:12px;white-space:pre;overflow:auto;font-family:var(--font-code);font-size:0.82rem;line-height:1.4;color:#e6f9ff}
-.code-meta{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,0.02);font-size:0.78rem}
-.code-meta .lang{font-weight:700;color:rgba(255,255,255,0.85)}
-.code-actions button{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;color:var(--neon-cyan);cursor:pointer;font-weight:700}
-.code-actions button.copy-code{color:var(--neon-success)}
-.code-actions button.run-preview{color:var(--neon-gold)}
-.preview-wrap{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-.preview-iframe{width:100%;min-height:220px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#000;overflow:hidden}
-.preview-controls{display:flex;gap:8px;align-items:center;justify-content:flex-end}
-.small-note{font-size:0.75rem;color:rgba(255,255,255,0.55)}
-@media(min-width:900px){ .preview-wrap{flex-direction:row;gap:12px} .code-block{flex:1} .preview-iframe{width:45%} }
-.smart-toolbar-input{background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px;color:#fff;font-family:var(--font-code);font-size:0.78rem}
-.crystal-badge{background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.03);padding:6px 8px;border-radius:999px;color:var(--neon-purple);font-weight:700}
+
+<!-- ======= TEXT_BEAUTY_V3 LITE (UI/CSS somente) ======= -->
+<style id="TEXT_BEAUTY_V3_LITE">
+:root{
+  --tb-txt-card: color-mix(in oklab, var(--bg-panel, #0a0a0c) 90%, black);
+  --tb-txt-bd: color-mix(in oklab, var(--text-main, #e5e7eb) 14%, transparent);
+  --tb-chip-bg: linear-gradient(42deg, var(--neon-cyan, #00f2ff), var(--neon-purple, #bd00ff));
+  --tb-chip-ink: #000;
+  --tb-paren-ink: color-mix(in oklab, var(--text-main, #e5e7eb) 92%, white);
+}
+
+/* texto em blocos de resposta */
+.response-block p{
+  text-wrap: pretty;
+  line-height: 1.6;
+  letter-spacing: .01em;
+  margin: .6rem 0;
+  hyphens: auto;
+}
+
+/* parênteses realce */
+.tb-span-paren{
+  padding: .05rem .35rem;
+  border-radius: .45rem;
+  border: 1px solid var(--tb-txt-bd);
+  color: var(--tb-paren-ink);
+  background: color-mix(in oklab, var(--tb-txt-card) 86%, transparent);
+}
+
+/* chip simples */
+.tb-chip, .tb-chip-btn{
+  display:inline-grid; place-items:center;
+  padding:.22rem .5rem; border-radius:999px;
+  background: var(--tb-chip-bg); color: var(--tb-chip-ink);
+  font-weight:700; letter-spacing:.02em; cursor:pointer; user-select:none;
+}
+
+/* badge copiar lista */
+.tb-copy-badge{
+  position:absolute; top:.45rem; right:.45rem;
+  font-size:.78rem; padding:.2rem .45rem; border-radius:999px;
+  background: color-mix(in oklab, #fff 12%, var(--tb-txt-card));
+  border: 1px solid var(--tb-txt-bd);
+  color: var(--text-main); opacity:.9; transition:.18s; user-select:none;
+  cursor:pointer;
+}
+
+/* botao copiar código no <pre> */
+.tb-copy-code{
+  position:absolute; top:8px; right:10px; z-index:6;
+  font-size:.78rem; padding:.28rem .5rem; border-radius:8px;
+  background:rgba(0,0,0,0.55); color:#fff; border:1px solid rgba(255,255,255,0.06);
+  cursor:pointer;
+}
+
+/* raw html container visual */
+.tb-raw-html {
+  background: var(--tb-txt-card); border: 1px dashed var(--tb-txt-bd);
+  border-radius: 10px; padding: .7rem; margin: .6rem 0;
+}
+.tb-raw-html .tb-raw-note{ color: color-mix(in oklab, var(--text-main) 62%, transparent); font-size:.9em; margin-bottom:.35rem; }
 </style>
 
-<script>
+<script id="TEXT_BEAUTY_V3_LITE_SCRIPT">
 (function(){
+  if(window.__DUAL_TEXT_BEAUTY_V3_LITE_LOADED__) return;
+  window.__DUAL_TEXT_BEAUTY_V3_LITE_LOADED__ = true;
 
-/* ======= Smart Renderer: overwrite existing renderPaginatedResponse ======= */
-/* This script expects splitBlocks(text) to exist (your file already has it). If not, a fallback is included. */
-
-function markdownToHtml(md){
-  if(!md) return '';
-  // basic escapes
-  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // code blocks handled earlier; here we do inline transformations
-  let out = esc(md);
-  // headings
-  out = out.replace(/^###### (.*$)/gim,'<h6>$1</h6>')
-           .replace(/^##### (.*$)/gim,'<h5>$1</h5>')
-           .replace(/^#### (.*$)/gim,'<h4>$1</h4>')
-           .replace(/^### (.*$)/gim,'<h3>$1</h3>')
-           .replace(/^## (.*$)/gim,'<h2>$1</h2>')
-           .replace(/^# (.*$)/gim,'<h1>$1</h1>');
-  // bold **text**
-  out = out.replace(/(\*\*|__)(.*?)\1/gm,'<strong>$2</strong>');
-  // italic *text*
-  out = out.replace(/(\*|_)(.*?)\1/gm,'<em>$2</em>');
-  // inline code `code`
-  out = out.replace(/`([^`]+)`/g,'<code>$1</code>');
-  // links [text](url)
-  out = out.replace(/$begin:math:display$\(\[\^$end:math:display$]+)\]$begin:math:text$\(https\?\:\\\/\\\/\[\^\\s\)\]\+\)$end:math:text$/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  // unordered lists
-  out = out.replace(/^\s*[-*]\s+(.*)/gm,'<li>$1</li>');
-  out = out.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
-  // paragraphs (naive)
-  out = out.replace(/(?:\r\n|\r|\n){2,}/g,'\n\n'); // normalize
-  const lines = out.split('\n\n').map(s=> s.trim()).filter(Boolean).map(s=>{
-    if(/^<h|^<ul|^<pre|^<blockquote|^<h/.test(s)) return s;
-    return '<p>'+s+'</p>';
-  });
-  return lines.join('\n');
-}
-
-function escapeHTML(s){
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function parseFencedCodeBlocks(text){
-  // returns array of {type:'text'|'code', lang, content}
-  const parts = [];
-  let lastIndex = 0;
-  const re = /```(\w+)?\n([\s\S]*?)```/g;
-  let m;
-  while((m = re.exec(text)) !== null){
-    if(m.index > lastIndex){
-      parts.push({type:'text', content: text.slice(lastIndex, m.index)});
+  // copia com feedback (pequeno utilitário)
+  async function _copyWithFeedback(text, btn){
+    try{
+      await navigator.clipboard.writeText(String(text||''));
+      const prev = btn.innerText;
+      btn.innerText = 'Copiado!';
+      setTimeout(()=> btn.innerText = prev, 1200);
+      return true;
+    }catch(e){
+      console.warn('[TB-LITE] copy fail', e);
+      return false;
     }
-    parts.push({type:'code', lang: m[1] || 'text', content: m[2]});
-    lastIndex = re.lastIndex;
   }
-  if(lastIndex < text.length) parts.push({type:'text', content: text.slice(lastIndex)});
-  return parts;
-}
 
-/* Helpers for resources (CloudMirror / Allo Scripts / Allo Service) saved in localStorage */
-const RESOURCE_KEYS = {
-  CLOUD: 'sr_cloudmirror_urls',
-  ALLO_SCRIPTS: 'sr_allo_scripts',
-  ALLO_SERVICE: 'sr_allo_service'
-};
-
-function getResourceList(key){
-  try{ return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ return []; }
-}
-function addResource(key, url){
-  const arr = getResourceList(key);
-  if(!url) return;
-  if(!arr.includes(url)) arr.unshift(url);
-  localStorage.setItem(key, JSON.stringify(arr.slice(0,8)));
-}
-function getAllResources(){
-  return [...getResourceList(RESOURCE_KEYS.CLOUD), ...getResourceList(RESOURCE_KEYS.ALLO_SCRIPTS), ...getResourceList(RESOURCE_KEYS.ALLO_SERVICE)];
-}
-
-/* Create the code/preview node for a given code block */
-function createCodePreviewNode(lang, code){
-  const container = document.createElement('div');
-  container.className = 'code-block';
-
-  // header/meta
-  const meta = document.createElement('div'); meta.className = 'code-meta';
-  meta.innerHTML = `<div class="lang">${(lang||'txt').toUpperCase()}</div><div class="small-note">Sandbox preview available</div>`;
-  container.appendChild(meta);
-
-  // code + copy
-  const pre = document.createElement('pre'); const codeEl = document.createElement('code');
-  codeEl.innerText = code;
-  pre.appendChild(codeEl);
-  container.appendChild(pre);
-
-  // actions row
-  const actions = document.createElement('div'); actions.className = 'smart-code-toolbar';
-  actions.innerHTML = `
-    <div class="smart-code-left"><div class="smart-code-label">Code</div></div>
-    <div class="smart-code-actions code-actions">
-      <button class="copy-code" title="Copiar código">COPIAR</button>
-      <button class="run-preview" title="Rodar no sandbox (allow-scripts)">RUN</button>
-      <button class="download-z" title="Baixar (Z)">Z</button>
-      <button class="resource-config" title="Configurar CDN/CloudMirror">CDN+</button>
-      <button class="crystalize-btn" title="Cristalizar">✶</button>
-    </div>
-  `;
-  container.insertBefore(actions, pre);
-
-  // preview iframe
-  const previewWrap = document.createElement('div'); previewWrap.className = 'preview-wrap';
-  const iframe = document.createElement('iframe');
-  iframe.className = 'preview-iframe';
-  iframe.setAttribute('sandbox','allow-scripts'); // important: scripts run but can't access parent (no allow-same-origin)
-  iframe.setAttribute('scrolling','auto');
-  previewWrap.appendChild(iframe);
-
-  // preview controls (resource list summary)
-  const pcontrols = document.createElement('div'); pcontrols.className='preview-controls small-note';
-  pcontrols.innerHTML = `<span class="small-note">Recursos: <span class="res-count">0</span></span>`;
-  previewWrap.appendChild(pcontrols);
-
-  container.appendChild(previewWrap);
-
-  // wire buttons
-  actions.querySelector('.copy-code').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(code); showToaster('Código copiado', 'success'); } catch(e){ showToaster('Erro copiar', 'error'); }
-  });
-
-  actions.querySelector('.download-z').addEventListener('click', () => {
-    const blob = new Blob([code], { type: lang==='html' ? 'text/html' : 'text/plain' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = ( (lang==='html') ? 'snippet.html' : 'snippet.txt' );
-    // Button label specifically should be 'Z'
-    a.click(); URL.revokeObjectURL(a.href);
-  });
-
-  actions.querySelector('.crystalize-btn').addEventListener('click', () => {
-    // Call your app's cristalizar if exists; fallback to local storage
-    const payload = { id: Date.now(), title: `Code ${lang.toUpperCase()}`, content: code, at: new Date().toISOString() };
-    if(typeof window.cristalizar === 'function'){
-      try{ window.cristalizar({ title: payload.title, content: code }); showToaster('Cristalizado (integrado)', 'success'); return; } catch(e){ console.warn('crystal integrate failed', e); }
-    }
-    // fallback
-    const KEY = 'sr_local_crystals';
-    const arr = JSON.parse(localStorage.getItem(KEY)||'[]'); arr.unshift(payload); localStorage.setItem(KEY, JSON.stringify(arr));
-    showToaster('Cristalizado (local)', 'success');
-  });
-
-  actions.querySelector('.resource-config').addEventListener('click', async () => {
-    // prompt for adding resource; basic UX
-    const kind = prompt('Tipo de recurso a adicionar:\n1 - CloudMirror\n2 - Allo Scripts\n3 - Allo Service\n(Escolha 1,2 ou 3)');
-    if(!kind) return;
-    const url = prompt('Cole a URL do CDN/Script (https://...)');
-    if(!url) return;
-    if(kind==='1') addResource(RESOURCE_KEYS.CLOUD, url);
-    if(kind==='2') addResource(RESOURCE_KEYS.ALLO_SCRIPTS, url);
-    if(kind==='3') addResource(RESOURCE_KEYS.ALLO_SERVICE, url);
-    pcontrols.querySelector('.res-count').innerText = getAllResources().length;
-    showToaster('Recurso adicionado', 'success');
-  });
-
-  actions.querySelector('.run-preview').addEventListener('click', () => {
-    // build srcdoc with optional resources
-    const resources = getAllResources();
-    const headParts = [];
-    for(const r of resources){
-      if(/\.css($|\?)/i.test(r)) headParts.push(`<link rel="stylesheet" href="${escapeHTML(r)}">`);
-      else headParts.push(`<script src="${escapeHTML(r)}"></script>`);
-    }
-    
-    iframe.srcdoc = srcdoc;
-    pcontrols.querySelector('.res-count').innerText = resources.length;
-  });
-
-  // initial resource count
-  pcontrols.querySelector('.res-count').innerText = getAllResources().length;
-
-  return container;
-}
-
-/* Replace (override) the existing renderPaginatedResponse function */
-window.renderPaginatedResponse = function(text){
-  speechSynthesis.cancel && speechSynthesis.cancel();
-  autoAdvance = true;
-  const respEl = document.getElementById('response');
-  if(!respEl) return;
-  // remove old pages (keep .initial if present)
-  respEl.querySelectorAll('.page:not(.initial)').forEach(p=>p.remove());
-  pages = [];
-  // reuse existing splitBlocks if available; fallback
-  const groups = (typeof splitBlocks === 'function') ? splitBlocks(text) : (function(){
-    // fallback: split into paragraphs groups of 3
-    const paras = (text||'').split(/\n\s*\n/).filter(Boolean);
-    const g = []; for(let i=0;i<paras.length;i+=3) g.push(paras.slice(i,i+3)); return g.length ? g : [[text,'','']];
-  })();
-
-  const titles = ['🎁 Recompensa Inicial','👁️ Exploração e Curiosidade','⚡ Antecipação Vibracional'];
-
-  groups.forEach((tris, gi) => {
-    const page = document.createElement('div'); page.className = (gi===0 ? 'page active' : 'page');
-
-    tris.forEach((body, j) => {
-      const cls = (j===0 ? 'intro' : j===1 ? 'middle' : 'ending');
-      const block = document.createElement('div'); block.className = 'response-block '+cls;
-      const header = document.createElement('h3'); header.innerText = titles[j];
-      const meta = document.createElement('div'); meta.className = 'meta';
-      // crystal button (reuse existing)
-      const crystalBtn = document.createElement('button'); crystalBtn.className='crystal-btn'; crystalBtn.title='Cristalizar'; crystalBtn.innerText='✶';
-      crystalBtn.addEventListener('click', ev=>{
+  // adiciona botão "Copiar Código" em <pre> dentro de .response-block
+  function beautifyPre(root=document){
+    (root || document).querySelectorAll('.response-block pre').forEach(pre=>{
+      if(pre.dataset.tb_lite_pre) return;
+      // wrapper position
+      if(getComputedStyle(pre).position === 'static') pre.style.position = 'relative';
+      const btn = document.createElement('button');
+      btn.className = 'tb-copy-code';
+      btn.type = 'button';
+      btn.innerText = 'Copiar Código';
+      btn.addEventListener('click', (ev)=>{
         ev.stopPropagation();
-        if(typeof window.cristalizar === 'function'){
-          window.cristalizar({ title: titles[j], content: body });
-          crystalBtn.innerText = '✓'; setTimeout(()=> crystalBtn.innerText = '✶', 1200);
-        } else {
-          const KEY='sr_local_crystals';
-          const arr=JSON.parse(localStorage.getItem(KEY)||'[]'); arr.unshift({id:Date.now(),title:titles[j],content:body,at:new Date().toISOString()}); localStorage.setItem(KEY,JSON.stringify(arr));
-          crystalBtn.innerText = '✓'; setTimeout(()=> crystalBtn.innerText = '✶', 1200);
-        }
+        const code = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
+        _copyWithFeedback(code, btn);
       });
-      meta.appendChild(crystalBtn);
+      pre.appendChild(btn);
+      pre.dataset.tb_lite_pre = '1';
+    });
+  }
 
-      block.appendChild(meta);
-      block.appendChild(header);
-
-      // detect fenced code blocks
-      const parts = parseFencedCodeBlocks(body);
-      parts.forEach(p => {
-        if(p.type === 'code'){
-          const codeNode = createCodePreviewNode(p.lang, p.content);
-          block.appendChild(codeNode);
-        } else {
-          // plain text part may include markdown -> convert and append
-          const html = markdownToHtml(p.content);
-          const div = document.createElement('div'); div.innerHTML = html;
-          block.appendChild(div);
-        }
+  // adiciona badge "Copiar Lista" para <ul> e <ol> dentro de .response-block
+  function enableListCopy(root=document){
+    (root || document).querySelectorAll('.response-block ul, .response-block ol').forEach(list=>{
+      if(list.dataset.tb_lite_list) return;
+      // wrap parent to allow absolute badge
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'relative';
+      list.parentNode.insertBefore(wrapper, list);
+      wrapper.appendChild(list);
+      const badge = document.createElement('button');
+      badge.className = 'tb-copy-badge';
+      badge.type = 'button';
+      badge.innerText = 'Copiar Lista';
+      badge.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const txt = Array.from(list.querySelectorAll('li')).map(li => li.innerText.trim()).join('\n');
+        _copyWithFeedback(txt, badge);
       });
+      wrapper.appendChild(badge);
+      list.dataset.tb_lite_list = '1';
+    });
+  }
 
-      // click behavior: speak or call AI like previous logic
-      block.dataset.state = '';
-      block.addEventListener('click', () => {
-        const bodyText = block.innerText || body;
-        if (!block.dataset.state) {
-          speechSynthesis.cancel(); speakText(bodyText); block.classList.add('clicked'); block.dataset.state = 'spoken';
-        } else {
-          block.classList.add('expanded'); block.dataset.state = '';
-          if (!assistantEnabled) {
-            assistantEnabled = true; localStorage.setItem('di_assistantEnabled','1');
-            updateToggleBtnVisual();
-            if (training && trainingActive) conversation.unshift({ role:'system', content: training });
+  // renderiza data-raw de forma sanitizada (usa DOMPurify se disponível)
+  function renderRawHTML(root=document){
+    (root || document).querySelectorAll('.response-block[data-raw]').forEach(block=>{
+      if(block.dataset.tb_lite_raw) return;
+      const raw = block.dataset.raw || '';
+      if(!raw) { block.dataset.tb_lite_raw = '1'; return; }
+      if(/<\s*(div|img|p|table|section|iframe|svg)/i.test(raw)){
+        try{
+          let safe = raw;
+          if(window.DOMPurify && typeof DOMPurify.sanitize === 'function'){
+            safe = DOMPurify.sanitize(raw, {ADD_ATTR: ['allow','allowfullscreen','loading']});
           }
-          const blockText = `${titles[j]}\n\n${body}`;
-          showLoading('Pulso em Expansão...'); speakText('Pulso em Expansão...');
-          conversation.push({ role:'user', content: blockText });
-          callAI();
+          const tmp = document.createElement('div');
+          tmp.innerHTML = safe;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'tb-raw-html';
+          wrapper.innerHTML = '<div class="tb-raw-note">Conteúdo HTML renderizado</div>';
+          wrapper.appendChild(tmp);
+          block.innerHTML = ''; // substitui conteúdo interno
+          block.appendChild(wrapper);
+        }catch(e){
+          console.warn('[TB-LITE] renderRawHTML error', e);
         }
-      });
-
-      page.appendChild(block);
+      }
+      block.dataset.tb_lite_raw = '1';
     });
+  }
 
-    page.appendChild( (function(){ const p = document.createElement('p'); p.className='footer-text'; p.innerHTML = '<em>Do seu jeito. <strong>Sempre</strong> único. <strong>Sempre</strong> seu.</em>'; return p; })() );
-    const controls = respEl.querySelector('.response-controls');
-    respEl.insertBefore(page, controls);
-    pages.push(page);
-  });
+  // principal: roda todas as transformações
+  function runAll(rootSelector){
+    const root = rootSelector ? document.querySelector(rootSelector) : (document.getElementById('response') || document);
+    if(!root) return;
+    beautifyPre(root);
+    enableListCopy(root);
+    renderRawHTML(root);
+  }
 
-  currentPage = 0; document.getElementById('pageIndicator').textContent = `1 / ${pages.length}`;
-  // speak first page
-  (function speakPage(i){
-    const page = pages[i]; if(!page) return;
-    const body = Array.from(page.querySelectorAll('.response-block')).map(b=>b.innerText).join(' ');
-    speakText(body, () => {
-      if(!autoAdvance) return;
-      if(i < pages.length - 1){ changePage(1); speakPage(i+1); } else { speakText('Sempre único, sempre seu.'); }
+  // MutationObserver para observar #response e processar adições dinâmicas
+  try{
+    const target = document.getElementById('response') || document.body;
+    const mo = new MutationObserver((mutations)=>{
+      for(const m of mutations){
+        if(!m.addedNodes) continue;
+        for(const n of m.addedNodes){
+          if(n.nodeType !== 1) continue;
+          if(n.matches && (n.matches('.response-block') || n.matches('.page') || n.querySelector && (n.querySelector('.response-block') || n.querySelector('pre') || n.querySelector('ul')))){
+            runAll(n);
+          }
+        }
+      }
     });
-  })(0);
-};
+    mo.observe(target, { childList: true, subtree: true });
+  }catch(e){ console.warn('[TB-LITE] Observer fail', e); }
 
-/* small helper toaster fallback if showToaster not available */
-function showToaster(msg, type){
-  if(typeof window.showToaster === 'function'){ window.showToaster(msg, type); return; }
-  const t = document.createElement('div'); t.style.position='fixed'; t.style.right='18px'; t.style.bottom='18px'; t.style.padding='10px 14px';
-  t.style.background = (type==='error') ? 'rgba(255,20,20,0.12)' : 'rgba(0,255,150,0.06)'; t.style.border='1px solid rgba(255,255,255,0.06)'; t.style.color='#fff'; t.style.zIndex=999999;
-  t.innerText = msg; document.body.appendChild(t); setTimeout(()=> t.remove(),2200);
-}
+  // exposições utilitárias
+  window.__DUAL_TEXT_BEAUTY_V3_LITE = { runAll };
 
-/* Initialize resource count in existing previews (if any) */
-document.querySelectorAll('.code-block .preview-controls .res-count').forEach(el=>el.innerText = getAllResources().length);
-
-})(); // IIFE
+  // kick inicial após DOMReady
+  document.addEventListener('DOMContentLoaded', ()=> setTimeout(()=> runAll('#response'), 80));
+  console.info('[TEXT_BEAUTY_V3_LITE] carregado (UI/CSS apenas).');
+})();
 </script>
-<!-- ====== END: Smart Code Renderer ====== -->
+<!-- ======= FIM: TEXT_BEAUTY_V3 LITE ======= -->
+
+
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kodux App — Static HTML</title>
+
+  <!-- Tailwind CDN (aplica as classes utilitárias que você usou) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide icons (usamos os ícones por data-attribute) -->
+  <script src="https://unpkg.com/lucide/dist/lucide.min.js"></script>
+
+  <style>
+    /* Animações customizadas (do seu script original) */
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes spin-super-slow {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes pulse-slow {
+      0% { opacity: .8; }
+      50% { opacity: .4; }
+      100% { opacity: .8; }
+    }
+    .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+    .animate-spin-super-slow { animation: spin-super-slow 30s linear infinite; }
+    .animate-pulse-slow { animation: pulse-slow 3.5s ease-in-out infinite; }
+
+    .perspective-1000 { perspective: 1000px; }
+
+    /* Pequeno ajuste para o tooltip (mantém invisível até hover via classe group) */
+    [data-tooltip] { pointer-events: none; }
+
+    /* Ajustes para as classes Tailwind com colchetes (algumas distribuições CDN já suportam) */
+  </style>
+</head>
+<body class="min-h-screen bg-[#050505] text-white font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col relative">
+
+  <!-- BACKGROUND AMBIENTE -->
+  <div class="fixed inset-0 pointer-events-none">
+    <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900/10 rounded-full blur-[120px] animate-pulse-slow"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-cyan-900/10 rounded-full blur-[120px] animate-pulse-slow delay-1000"></div>
+    <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+  </div>
+
+  <!-- APP HEADER (User / State Bar) -->
+  <header id="appHeader"
+    class="sticky top-0 w-full px-6 z-50 transition-all duration-500 flex items-center justify-between h-[72px] bg-[#0a0a0c]/75 backdrop-blur-xl border-b border-white/5">
+    <!-- LADO ESQUERDO: IDENTIDADE -->
+    <div class="flex items-center gap-3.5 group cursor-default">
+      <div class="relative">
+        <div id="avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#7afff5] to-[#1b3b3b] shadow-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+          <i data-lucide="cpu" data-size="18" stroke-width="1.8" class="text-black/60 mix-blend-overlay"></i>
+        </div>
+        <div id="statusDot" class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0a0a0c] bg-gray-500"></div>
+      </div>
+
+      <div class="flex flex-col">
+        <div class="text-[15px] font-bold tracking-wide text-white leading-tight flex items-center gap-2">
+          KODUX
+          <span class="text-[10px] px-1.5 py-0.5 rounded border border-white/10 bg-white/5 font-mono font-normal opacity-60">v2.4</span>
+        </div>
+        <div class="text-xs font-mono text-white/50 flex items-center gap-1.5">
+          <span>Navigator</span>
+          <span class="w-1 h-1 rounded-full bg-white/30"></span>
+          <span id="estado78" class="transition-colors duration-300 text-white/50">Estado 78K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTRO (Opcional - Invisível em mobile) -->
+    <div class="hidden md:flex items-center gap-6 absolute left-1/2 transform -translate-x-1/2 opacity-40 hover:opacity-100 transition-opacity duration-300">
+      <div class="flex items-center gap-2 text-xs font-mono uppercase tracking-widest cursor-pointer hover:text-cyan-400 transition-colors">
+        <i data-lucide="activity" data-size="12"></i>
+        System Stable
+      </div>
+    </div>
+
+    <!-- LADO DIREITO: CONTROLES -->
+    <div class="flex items-center gap-2.5">
+      <button id="btnBrain" class="w-9 h-9 rounded-[10px] flex items-center justify-center transition-all duration-200 group relative bg-white/5 text-white/70 border border-transparent hover:bg-white/10 hover:text-white" data-tooltip>
+        <i data-lucide="brain" data-size="18"></i>
+        <span class="absolute top-full mt-2 px-2 py-1 bg-[#1a1a1e] border border-white/10 rounded text-[10px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Neural Core</span>
+      </button>
+
+      <button id="btnMoon" class="w-9 h-9 rounded-[10px] flex items-center justify-center transition-all duration-200 group relative bg-white/5 text-white/70 border border-transparent hover:bg-white/10 hover:text-white" data-tooltip>
+        <i data-lucide="moon" data-size="18"></i>
+        <span class="absolute top-full mt-2 px-2 py-1 bg-[#1a1a1e] border border-white/10 rounded text-[10px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Theme</span>
+      </button>
+
+      <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
+
+      <button id="btnSettings" class="w-9 h-9 rounded-[10px] flex items-center justify-center transition-all duration-200 group relative bg-white/5 text-white/70 border border-transparent hover:bg-white/10 hover:text-white" data-tooltip>
+        <i data-lucide="settings" data-size="18"></i>
+        <span class="absolute top-full mt-2 px-2 py-1 bg-[#1a1a1e] border border-white/10 rounded text-[10px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Config</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN AREA (The Orb Context) -->
+  <main class="flex-1 flex flex-col items-center justify-center relative w-full perspective-1000">
+    <!-- Grid floor -->
+    <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none transform rotate-x-60 scale-150">
+      <div class="w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,transparent_0%,transparent_40%,rgba(122,255,245,0.1)_100%)]"></div>
+    </div>
+
+    <!-- THE ORB SYSTEM -->
+    <div id="orbClickable" class="relative cursor-pointer group z-10">
+      <div id="orbContainer" class="relative w-64 h-64 md:w-80 md:h-80 transition-all duration-700 ease-out">
+        <!-- Core Glow -->
+        <div id="coreGlow" class="absolute inset-0 rounded-full blur-[80px] transition-all duration-700 opacity-60 bg-blue-900/20"></div>
+
+        <!-- The Physical Orb -->
+        <div id="orbPhysical" class="absolute inset-4 rounded-full border border-white/10 backdrop-blur-sm shadow-2xl overflow-hidden transition-all duration-700 bg-gradient-to-br from-white/10 to-transparent">
+          <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+
+          <div id="innerLight" class="absolute top-0 left-0 w-full h-full rounded-full transition-all duration-1000 mix-blend-soft-light bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),transparent)]"></div>
+        </div>
+
+        <!-- Orbital Rings - Interface -->
+        <svg class="absolute inset-0 w-full h-full animate-spin-super-slow opacity-40 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="0.2" stroke-dasharray="4 4" class="text-white/30"></circle>
+          <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="0.1" class="text-white/20"></circle>
+        </svg>
+
+        <!-- Status Label Flutuante (Abaixo do Orb) -->
+        <div class="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 min-w-[200px]">
+          <div id="statusLabel" class="text-xs font-mono tracking-[0.2em] uppercase transition-all duration-300 text-white/30">System Standby</div>
+          <div id="decorLine" class="h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-500 w-0 opacity-0"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER SUTIL -->
+  <div class="fixed bottom-6 w-full flex justify-center pointer-events-none opacity-40">
+    <div class="flex gap-8 text-[10px] font-mono text-white/50">
+      <span class="flex items-center gap-1"><i data-lucide="shield-check" data-size="10"></i> SECURE CONNECTION</span>
+      <span>LATENCY: 12ms</span>
+      <span>CPU: 4%</span>
+    </div>
+  </div>
+
+  <!-- Script: comportamento (sem React) -->
+  <script>
+    // Estado da aplicação
+    let appState = 'idle'; // idle, listening, processing, active
+    let themeMode = 'dual'; // dual, mono
+    let scrolled = false;
+
+    // Mapeamento de elementos
+    const header = document.getElementById('appHeader');
+    const avatar = document.getElementById('avatar');
+    const statusDot = document.getElementById('statusDot');
+    const estado78 = document.getElementById('estado78');
+
+    const orbContainer = document.getElementById('orbContainer');
+    const coreGlow = document.getElementById('coreGlow');
+    const orbPhysical = document.getElementById('orbPhysical');
+    const innerLight = document.getElementById('innerLight');
+    const statusLabel = document.getElementById('statusLabel');
+    const decorLine = document.getElementById('decorLine');
+
+    const btnBrain = document.getElementById('btnBrain');
+    const btnMoon = document.getElementById('btnMoon');
+
+    // Scroll listener para compactar header
+    window.addEventListener('scroll', () => {
+      scrolled = window.scrollY > 20;
+      if (scrolled) {
+        header.classList.remove('h-[72px]');
+        header.classList.add('h-[60px]');
+        header.classList.remove('bg-[#0a0a0c]/75');
+        header.classList.add('bg-[#0a0a0c]/90');
+      } else {
+        header.classList.add('h-[72px]');
+        header.classList.remove('h-[60px]');
+        header.classList.add('bg-[#0a0a0c]/75');
+        header.classList.remove('bg-[#0a0a0c]/90');
+      }
+    });
+
+    // Alterna estado (orb click)
+    function toggleState() {
+      const states = ['idle','listening','processing','active'];
+      const idx = states.indexOf(appState);
+      appState = states[(idx + 1) % states.length];
+      applyState();
+    }
+
+    // Aplica classes e texto baseado no estado atual
+    function applyState() {
+      // Header border + shadow (remoção de classes anteriores)
+      header.classList.remove('border-white/5','border-cyan-500/30','border-orange-500/30','border-emerald-500/30','shadow-[0_1px_20px_-10px_rgba(34,211,238,0.3)]','shadow-[0_1px_20px_-10px_rgba(249,115,22,0.3)]','shadow-[0_1px_20px_-10px_rgba(16,185,129,0.3)]');
+      if (appState === 'idle') {
+        header.classList.add('border-white/5');
+      } else if (appState === 'listening') {
+        header.classList.add('border-cyan-500/30','shadow-[0_1px_20px_-10px_rgba(34,211,238,0.3)]');
+      } else if (appState === 'processing') {
+        header.classList.add('border-orange-500/30','shadow-[0_1px_20px_-10px_rgba(249,115,22,0.3)]');
+      } else { // active
+        header.classList.add('border-emerald-500/30','shadow-[0_1px_20px_-10px_rgba(16,185,129,0.3)]');
+      }
+
+      // Avatar spin when processing
+      avatar.classList.remove('animate-spin-slow');
+      if (appState === 'processing') avatar.classList.add('animate-spin-slow');
+
+      // Status dot color
+      statusDot.classList.remove('bg-gray-500','bg-cyan-400','animate-pulse','bg-orange-400','animate-ping','bg-emerald-400');
+      if (appState === 'idle') statusDot.classList.add('bg-gray-500');
+      if (appState === 'listening') statusDot.classList.add('bg-cyan-400','animate-pulse');
+      if (appState === 'processing') statusDot.classList.add('bg-orange-400','animate-ping');
+      if (appState === 'active') statusDot.classList.add('bg-emerald-400');
+
+      // Orb core glow classes
+      coreGlow.classList.remove('bg-blue-900/20','bg-cyan-500/30','bg-orange-500/30','scale-125','bg-emerald-500/30','scale-110');
+      if (appState === 'idle') coreGlow.classList.add('bg-blue-900/20');
+      if (appState === 'listening') coreGlow.classList.add('bg-cyan-500/30');
+      if (appState === 'processing') coreGlow.classList.add('bg-orange-500/30','scale-125');
+      if (appState === 'active') coreGlow.classList.add('bg-emerald-500/30','scale-110');
+
+      // Orb physical border / shadow
+      orbPhysical.classList.remove('border-cyan-500/50','shadow-[0_0_50px_rgba(34,211,238,0.2)]','border-orange-500/50','shadow-[0_0_50px_rgba(249,115,22,0.2)]');
+      if (appState === 'listening') orbPhysical.classList.add('border-cyan-500/50','shadow-[0_0_50px_rgba(34,211,238,0.2)]');
+      if (appState === 'processing') orbPhysical.classList.add('border-orange-500/50','shadow-[0_0_50px_rgba(249,115,22,0.2)]');
+
+      // Inner dynamic light
+      innerLight.classList.remove(
+        'bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),transparent)]',
+        'bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.4),transparent)]','animate-pulse-slow',
+        'bg-[radial-gradient(circle_at_70%_70%,rgba(249,115,22,0.4),transparent)]','animate-spin-slow'
+      );
+
+      if (appState === 'idle') {
+        innerLight.classList.add('bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),transparent)]');
+      } else if (appState === 'listening') {
+        innerLight.classList.add('bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.4),transparent)]','animate-pulse-slow');
+      } else if (appState === 'processing') {
+        innerLight.classList.add('bg-[radial-gradient(circle_at_70%_70%,rgba(249,115,22,0.4),transparent)]','animate-spin-slow');
+      } else {
+        innerLight.classList.add('bg-[radial-gradient(circle_at_70%_70%,rgba(16,185,129,0.25),transparent)]');
+      }
+
+      // Status label text + color
+      statusLabel.classList.remove('text-white/30','text-cyan-400','drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]');
+      if (appState === 'idle') {
+        statusLabel.textContent = 'System Standby';
+        statusLabel.classList.add('text-white/30');
+      } else if (appState === 'listening') {
+        statusLabel.textContent = 'Listening...';
+        statusLabel.classList.add('text-cyan-400','drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]');
+      } else if (appState === 'processing') {
+        statusLabel.textContent = 'Processing Data';
+        statusLabel.classList.add('text-cyan-400','drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]');
+      } else {
+        statusLabel.textContent = 'Task Complete';
+        statusLabel.classList.add('text-cyan-400','drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]');
+      }
+
+      // Decorative line visibility
+      if (appState !== 'idle') {
+        decorLine.classList.remove('w-0','opacity-0');
+        decorLine.classList.add('w-full','opacity-100');
+      } else {
+        decorLine.classList.add('w-0','opacity-0');
+        decorLine.classList.remove('w-full','opacity-100');
+      }
+
+      // Buttons active state visual
+      btnBrain.classList.remove('bg-cyan-500/20','text-cyan-300','border','border-cyan-500/30','shadow-[0_0_15px_-5px_rgba(34,211,238,0.4)]');
+      if (appState === 'processing') {
+        btnBrain.classList.add('bg-cyan-500/20','text-cyan-300','border','border-cyan-500/30','shadow-[0_0_15px_-5px_rgba(34,211,238,0.4)]');
+      }
+
+      // Update estado78 color (small detail)
+      estado78.classList.remove('text-white/50','text-cyan-400');
+      if (appState === 'idle') estado78.classList.add('text-white/50');
+      else estado78.classList.add('text-cyan-400');
+    }
+
+    // Theme toggle (moon button)
+    function toggleTheme() {
+      themeMode = (themeMode === 'dual') ? 'mono' : 'dual';
+      if (themeMode === 'mono') {
+        btnMoon.classList.add('bg-cyan-500/20','text-cyan-300','border','border-cyan-500/30','shadow-[0_0_15px_-5px_rgba(34,211,238,0.4)]');
+      } else {
+        btnMoon.classList.remove('bg-cyan-500/20','text-cyan-300','border','border-cyan-500/30','shadow-[0_0_15px_-5px_rgba(34,211,238,0.4)]');
+      }
+      // Example theme effect: invert background slightly when mono
+      if (themeMode === 'mono') document.body.style.backgroundColor = '#040404';
+      else document.body.style.backgroundColor = '#050505';
+    }
+
+    // Eventos
+    document.getElementById('orbClickable').addEventListener('click', toggleState);
+    btnBrain.addEventListener('click', (e) => { e.stopPropagation(); toggleState(); });
+    btnMoon.addEventListener('click', (e) => { e.stopPropagation(); toggleTheme(); });
+    document.getElementById('btnSettings').addEventListener('click', (e) => { e.stopPropagation(); alert('Abrir configurações (placeholder)'); });
+
+    // Inicializa UI
+    applyState();
+
+    // Renderiza icons Lucide
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) lucide.createIcons();
+      else console.warn('Lucide icons not available.');
+    });
+
+    // Caso o DOM já esteja carregado quando o script rodar
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      if (window.lucide) lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

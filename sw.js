@@ -3,8 +3,7 @@ const CACHE_NAME = 'DI-cache-v1';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  
   './manifest.json'
 ];
 

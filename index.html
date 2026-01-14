@@ -1774,18 +1774,7 @@ function createCodePreviewNode(lang, code){
       if(/\.css($|\?)/i.test(r)) headParts.push(`<link rel="stylesheet" href="${escapeHTML(r)}">`);
       else headParts.push(`<script src="${escapeHTML(r)}"></script>`);
     }
-    // If the block is NOT html (e.g., js / css), we wrap a small HTML to run it
-    let srcdoc = '';
-    if(lang && lang.toLowerCase().startsWith('html')){
-      srcdoc = `<!doctype html><html><head>${headParts.join('')}</head><body>${code}</body></html>`;
-    } else if(lang && (lang.toLowerCase().startsWith('js') || lang.toLowerCase()==='javascript')){
-      srcdoc = `<!doctype html><html><head>${headParts.join('')}</head><body><script>${code}<\/script></body></html>`;
-    } else if(lang && lang.toLowerCase().startsWith('css')){
-      srcdoc = `<!doctype html><html><head>${headParts.join('')}<style>${code}<\/style></head><body></body></html>`;
-    } else {
-      // plain text: show inside pre
-      srcdoc = `<!doctype html><html><head>${headParts.join('')}</head><body><pre style="white-space:pre-wrap;font-family:monospace;padding:12px">${escapeHTML(code)}</pre></body></html>`;
-    }
+    
     iframe.srcdoc = srcdoc;
     pcontrols.querySelector('.res-count').innerText = resources.length;
   });
